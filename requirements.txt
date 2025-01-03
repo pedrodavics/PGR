@@ -1,0 +1,8 @@
+pandas
+numpy
+plotly
+pyzabbix
+scipy
+flask
+jaydebeapi
+paramiko
