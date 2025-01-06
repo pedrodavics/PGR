@@ -1,21 +1,17 @@
-import os
 import jaydebeapi
 import concurrent.futures
 from flask import Flask, jsonify, request, send_file
 import logging
 
-# Configuração de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configurações do arquivo e banco
-ARQUIVO_SQL = "./file_using/consulta_teste.sql"
-ARQUIVO_SAIDA = "./output/resultado_consulta.txt"
-JDBC_JAR = "./file_using/ojdbc11.jar"
+ARQUIVO_SQL = "./sql/queries.sql"
+ARQUIVO_SAIDA = "./output/result_jdbc.txt"
+JDBC_JAR = "./static/assets/ojdbc11.jar"
 URL = "jdbc:oracle:thin:@189.84.124.231:1521/orcl_pdb1"
 USER = "zbxtauge"
 PASSWORD = "zbxtauge"
 
-# Funções de SQL
 def executar_comando_sql(conexao, comando, arquivo_saida):
     cursor = conexao.cursor()
     try:
@@ -45,11 +41,9 @@ def executar_sql_e_conectar_oracle(arquivo_sql, arquivo_saida, jdbc_jar, url, us
     try:
         conexao = jaydebeapi.connect('oracle.jdbc.driver.OracleDriver', url, [user, password], jdbc_jar)
 
-        # Limpa o arquivo de saída antes de escrever
         with open(arquivo_saida, 'w', encoding='utf-8') as f_saida:
             f_saida.write("")
 
-        # Executa comandos SQL em paralelo
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [executor.submit(executar_comando_sql, conexao, comando, arquivo_saida) for comando in comandos_sql]
             for future in concurrent.futures.as_completed(futures):
@@ -65,7 +59,6 @@ def executar_sql_e_conectar_oracle(arquivo_sql, arquivo_saida, jdbc_jar, url, us
         if 'conexao' in locals() and conexao:
             conexao.close()
 
-# API Flask
 app = Flask(__name__)
 
 @app.route('/executar_sql', methods=['POST', 'GET'])

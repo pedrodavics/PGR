@@ -5,4 +5,6 @@ pyzabbix
 scipy
 flask
 jaydebeapi
-paramiko
+kaleido
+PyPDF2
+reportlab

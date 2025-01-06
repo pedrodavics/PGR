@@ -12,7 +12,7 @@ port = 2222
 username = "root"
 password = "b4rr1o2803"
 
-output_file = "sistema_info.txt"
+output_file = "result_os.txt"
 
 commands = [
     "hostname",
@@ -81,7 +81,6 @@ def executar_comandos():
         }), 200
     
     return jsonify({"erro": "Falha ao gerar o arquivo."}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)
