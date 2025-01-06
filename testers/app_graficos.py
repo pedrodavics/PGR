@@ -17,6 +17,10 @@ zabbix_url = "http://10.85.104.3"
 zabbix_user = "tauge.suporte"
 zabbix_password = "Aehee4haen8Sa.f"
 
+# Criar a pasta "output" se não existir
+output_dir = os.path.join(os.getcwd(), "output")
+os.makedirs(output_dir, exist_ok=True)
+
 def conectar_zabbix():
     try:
         zapi = ZabbixAPI(zabbix_url)
@@ -125,7 +129,8 @@ def gerar_grafico_consolidado(zapi, itens_per_host, tipo_item, groupid):
             logging.error(f"Erro ao acessar chave nos dados de histórico para o item {tipo_item}: {e}")
             continue
 
-    grafico_dir = f"graficos_{groupid}/{tipo_item.replace(' ', '_').lower()}"
+    # Diretório específico do tipo de gráfico
+    grafico_dir = os.path.join(output_dir, f"grupo_{groupid}")
     os.makedirs(grafico_dir, exist_ok=True)
 
     fig_path = os.path.join(grafico_dir, f"{tipo_item.replace(' ', '_').lower()}_consolidado.jpeg")
@@ -133,28 +138,35 @@ def gerar_grafico_consolidado(zapi, itens_per_host, tipo_item, groupid):
     logging.info(f"Gráfico consolidado salvo em {fig_path}")
     return fig_path
 
-@app.route('/gerar_grafico/<int:groupid>/<string:tipo_item>', methods=['GET'])
-def gerar_grafico(groupid, tipo_item):
+@app.route('/gerar_grafico/<int:groupid>', methods=['GET'])
+def gerar_graficos_para_grupo(groupid):
+    TIPOS_ITENS = ["CPU utilização", "Memória usada em %"]
     zapi = conectar_zabbix()
-    itens_per_host = obter_itens_do_grupo(zapi, groupid)
-    fig_path = gerar_grafico_consolidado(zapi, itens_per_host, tipo_item, groupid)
-   
-    local_output_dir = "/home/tauge/Documentos/automacao/output"
-    os.makedirs(local_output_dir, exist_ok=True)
-    
-    local_fig_path = os.path.join(local_output_dir, os.path.basename(fig_path))
 
-    try:
-        if os.path.exists(fig_path):
-            os.rename(fig_path, local_fig_path)
-            logging.info(f"Gráfico movido para {local_fig_path}")
-            return send_file(local_fig_path, as_attachment=True)
-        else:
-            logging.error("Gráfico não encontrado no caminho gerado.")
-            return jsonify({"erro": "Gráfico não encontrado."}), 404
-    except Exception as e:
-        logging.error(f"Erro ao mover ou baixar o gráfico: {e}")
-        return jsonify({"erro": "Erro ao processar o gráfico."}), 500
+    # Obter itens do grupo
+    itens_per_host = obter_itens_do_grupo(zapi, groupid)
+    if not itens_per_host:
+        logging.error(f"Nenhum host ou item encontrado para o grupo {groupid}.")
+        return jsonify({"erro": f"Nenhum dado encontrado para o grupo {groupid}."}), 404
+
+    graficos_gerados = []
+
+    for tipo_item in TIPOS_ITENS:
+        try:
+            fig_path = gerar_grafico_consolidado(zapi, itens_per_host, tipo_item, groupid)
+            graficos_gerados.append({"tipo_item": tipo_item, "caminho": fig_path})
+        except Exception as e:
+            logging.error(f"Erro ao gerar gráfico para {tipo_item}: {e}")
+            continue
+
+    if not graficos_gerados:
+        return jsonify({"erro": "Nenhum gráfico foi gerado devido a problemas no processamento."}), 500
+
+    return jsonify({
+        "mensagem": f"Gráficos gerados com sucesso para o grupo {groupid}.",
+        "graficos": graficos_gerados
+    })
+
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -8,9 +8,9 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Configurações do arquivo e banco
-ARQUIVO_SQL = "/home/tauge/Documentos/automacao/file_using/consulta_teste.sql"
-ARQUIVO_SAIDA = "/home/tauge/Documentos/automacao/output/resultado_consulta.txt"
-JDBC_JAR = "/home/tauge/Documentos/automacao/file_using/ojdbc11.jar"
+ARQUIVO_SQL = "./file_using/consulta_teste.sql"
+ARQUIVO_SAIDA = "./output/resultado_consulta.txt"
+JDBC_JAR = "./file_using/ojdbc11.jar"
 URL = "jdbc:oracle:thin:@189.84.124.231:1521/orcl_pdb1"
 USER = "zbxtauge"
 PASSWORD = "zbxtauge"

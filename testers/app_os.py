@@ -65,7 +65,7 @@ def generate_file():
         ssh_client.close()
         print("Conexão SSH encerrada.")
 
-output_directory = "/home/tauge/Documentos/automacao/output"
+output_directory = "./output"
 
 @app.route('/executar_comandos', methods=['POST', "GET"])
 def executar_comandos():
