@@ -25,7 +25,6 @@ def conectar_zabbix():
         logging.error(f"Erro ao conectar ao Zabbix: {e}")
         raise
 
-# Função para buscar gráficos por group_id
 def obter_graficos_por_grupo(zapi, group_id):
     try:
         # Obter todos os hosts associados ao group_id
@@ -49,32 +48,23 @@ def obter_graficos_por_grupo(zapi, group_id):
         logging.error(f"Erro ao buscar gráficos para o grupo {group_id}: {e}")
         return []
 
-def baixar_grafico_zabbix(zapi, graphid, groupid):
+def baixar_grafico_zabbix_via_http(session, graphid, groupid):
     try:
-        graph = zapi.graph.get(graphids=graphid, output='extend')
-        if not graph:
-            logging.error(f"Gráfico com ID {graphid} não encontrado.")
-            return None
-
-        # Registre o conteúdo completo do gráfico para verificar a estrutura
-        logging.info(f"Conteúdo do gráfico {graphid}: {graph}")
+        # Construir a URL do gráfico com parâmetros de tempo
+        grafico_url = f"{zabbix_url}/chart2.php?graphid={graphid}&period=3600"
         
-        # Verifique o campo correto para a URL, se for necessário
-        graph_url = graph[0].get('url', None)
+        # Caminho de salvamento
+        grafico_path = os.path.join(output_dir, f"grupo_{groupid}_grafico_{graphid}.png")
         
-        if not graph_url:
-            logging.error(f"Campo 'url' não encontrado para o gráfico {graphid}.")
-            return None
-        
-        grafico_url_completa = f"{zabbix_url}{graph_url}"
-
-        grafico_path = os.path.join(output_dir, f"grupo_{groupid}_grafico_{graphid}.jpeg")
-
-        response = requests.get(grafico_url_completa)
+        # Fazer o download do gráfico
+        headers = {
+            'Content-Type': 'application/json',
+        }
+        response = session.get(grafico_url, headers=headers, stream=True)
         if response.status_code == 200:
-            img_data = response.content
             with open(grafico_path, 'wb') as f:
-                f.write(img_data)
+                for chunk in response.iter_content(chunk_size=1024):
+                    f.write(chunk)
             logging.info(f"Gráfico {graphid} do grupo {groupid} salvo em {grafico_path}")
             return grafico_path
         else:
@@ -98,8 +88,16 @@ def baixar_graficos(group_id):
         
         grafico_paths = []
 
+        # Autenticar via sessão para download dos gráficos
+        session = requests.Session()
+        session.post(f"{zabbix_url}/index.php", data={
+            'name': zabbix_user,
+            'password': zabbix_password,
+            'enter': 'Sign in'
+        })
+
         for grafico in graficos:
-            grafico_path = baixar_grafico_zabbix(zapi, grafico['graphid'], groupid=group_id)  
+            grafico_path = baixar_grafico_zabbix_via_http(session, grafico['graphid'], groupid=group_id)  
 
             if grafico_path:
                 grafico_paths.append(grafico_path)
@@ -107,6 +105,7 @@ def baixar_graficos(group_id):
         if not grafico_paths:
             return jsonify({"erro": "Falha ao baixar os gráficos."}), 500
         
+        # Retornar o primeiro gráfico baixado como exemplo
         return send_file(grafico_paths[0], as_attachment=True)
     
     except Exception as e:

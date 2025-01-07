@@ -11,4 +11,6 @@ __pycache__/
 *.sublime-project
 *.sublime-workspace
 
+/output/
+
 *.log
