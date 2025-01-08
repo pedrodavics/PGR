@@ -1,128 +1,120 @@
 import os
-import re
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import (
-    BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, PageBreak, Image, HRFlowable
-)
-from reportlab.lib.units import inch
 from reportlab.lib import colors
-from PyPDF2 import PdfMerger
+import re
 
-def remover_tags_html(texto):
-    return re.sub(r'<.*?>', '', texto)
-
-def desenhar_rodape(canvas_obj, doc):
-    canvas_obj.setFont("Helvetica", 10)
-    page_num = doc.page
-    text = f"Página {page_num + 1}" 
-    canvas_obj.drawRightString(letter[0] - 50, 30, text)
-    canvas_obj.drawString(50, 30, "Tauge Tecnologia")
-
-def criar_capa(output_path):
-    from reportlab.pdfgen import canvas
-
-    largura, altura = letter
-    c = canvas.Canvas(output_path, pagesize=letter)
-
-    c.setFont("Helvetica-Bold", 36)
-    c.drawCentredString(largura / 2, altura - 200, "Relatório Trimestral")
-    c.setFont("Helvetica", 16)
-    c.setFillColor(colors.grey)
-
-    try:
-        img_path = "./static/images/tauge.jpeg"
-        c.drawImage(img_path, largura / 2 - 2.5 * inch, altura / 2 - 1.25 * inch, width=5 * inch, height=2.5 * inch)
-    except FileNotFoundError:
-        c.setFont("Helvetica", 12)
-        c.setFillColor("red")
-        c.drawCentredString(largura / 2, altura / 2, "Erro: Imagem da empresa não encontrada.")
-
-    c.showPage()
-    c.save()
-
-def adicionar_sessao(titulo, arquivo, pdf_content):
-    styles = getSampleStyleSheet()
-    titulo_style = ParagraphStyle(
-        'titulo',
-        fontSize=20,
-        leading=22,
-        fontName="Helvetica-Bold",
-        textColor=colors.black,
-        alignment=1,  
-        spaceAfter=10
-    )
-    titulo_formatado = Paragraph(titulo, titulo_style)
-    pdf_content.append(titulo_formatado)
-    pdf_content.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
-    pdf_content.append(Spacer(1, 12))
-
-    with open(arquivo, "r", encoding="utf-8") as file:
-        linhas = file.readlines()
-        for linha in linhas:
-            if not linha.strip().startswith("Comando:"):
-                linha_limpa = remover_tags_html(linha.strip())
-                paragrafo = Paragraph(linha_limpa, styles['Normal'])
-                pdf_content.append(paragrafo)
-                pdf_content.append(Spacer(1, 6))
-
-def adicionar_graficos(pdf_content):
-    styles = getSampleStyleSheet()
-    titulo = Paragraph("<font size=18><b>Gráficos</b></font>", styles['Heading2'])
-    pdf_content.append(titulo)
-    pdf_content.append(Spacer(1, 12))
-
-    graficos = ["./output/graficos_38/H.São Paulo - New Oracle Prod/grafico_4652.png"]
-    imagem_size = 5 * inch
-
-    for grafico in graficos:
-        try:
-            img = Image(grafico, width=imagem_size, height=imagem_size)
-            img.hAlign = 'CENTER'
-            pdf_content.append(img)
-            pdf_content.append(Spacer(1, 12))
-        except FileNotFoundError:
-            erro = Paragraph(f"<font size=12 color='red'>Erro: Arquivo {grafico} não encontrado.</font>", styles['Normal'])
-            pdf_content.append(erro)
-
-def gerar_pdf():
+def criar_subpasta_pdf():
     output_dir = "./output/pdf"
     os.makedirs(output_dir, exist_ok=True)
+    return output_dir
 
-    capa_path = "relatorio_capa.pdf"
-    relatorio_path = os.path.join(output_dir, "relatorio.pdf")
+def limpar_texto(texto):
+    # Remover quebras de linha extras e espaços no início e no final
+    texto_limpo = texto.replace("\n", " ").strip()
+    # Remover múltiplos espaços consecutivos
+    texto_limpo = re.sub(r'\s+', ' ', texto_limpo)
+    return texto_limpo
 
-    criar_capa(capa_path)
+def mapear_sessoes_pdf(caminho_pdf, sessoes_mapear):
+    try:
+        reader = PdfReader(caminho_pdf)
+        sessoes = {}
+        for i, page in enumerate(reader.pages):
+            texto = page.extract_text()
+            if texto:  # Verificar se o texto foi extraído
+                texto_limpo = limpar_texto(texto)  # Limpeza do texto extraído
+                print(f"Texto da página {i}: {texto_limpo[:300]}...")  # Exibir uma parte do texto limpo para depuração
+                for sessao in sessoes_mapear:
+                    if sessao.lower() in texto_limpo.lower():  # Ignorar maiúsculas/minúsculas
+                        sessoes[sessao] = i
+        return sessoes
+    except Exception as e:
+        print(f"Erro ao mapear sessões: {e}")
+        return {}
 
-    doc = BaseDocTemplate(relatorio_path, pagesize=letter)
+def adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt):
+    output_dir = criar_subpasta_pdf()
+    pdf_path = os.path.join(output_dir, "relatorio_atualizado.pdf")
+    
+    try:
+        reader = PdfReader(caminho_pdf)
+        writer = PdfWriter()
+        
+        for i, page in enumerate(reader.pages):
+            writer.add_page(page)
+            if i in sessoes.values():
+                # Adicionar novas informações a partir do arquivo .txt
+                sessao_nome = list(sessoes.keys())[list(sessoes.values()).index(i)]
+                arquivo_txt = arquivos_txt.get(sessao_nome)
 
-    frame = Frame(
-        doc.leftMargin, doc.bottomMargin + 0.5 * inch,
-        doc.width, doc.height - 0.5 * inch, id='normal'
-    )
-    conteudo_template = PageTemplate(id='Conteudo', frames=frame, onPage=desenhar_rodape)
-    doc.addPageTemplates([conteudo_template])
+                if arquivo_txt:
+                    with open(arquivo_txt, "r", encoding="utf-8") as file:
+                        conteudo = file.readlines()
 
-    pdf_content = []
+                    # Criar o canvas para adicionar o texto
+                    c = canvas.Canvas(pdf_path, pagesize=letter)
+                    c.setFont("Helvetica", 12)
+                    c.setFillColor(colors.black)
+                    
+                    # Encontre a posição da sessão mapeada
+                    texto_pagina = page.extract_text()
+                    texto_limpo = limpar_texto(texto_pagina)
+                    posicao_sessao = texto_limpo.lower().find(sessao_nome.lower())
+                    
+                    # Calcula o ponto de inserção para o novo texto (logo abaixo da sessão)
+                    y_position = 600  # Posição inicial ajustada
+                    if posicao_sessao != -1:
+                        # Ajustar a posição vertical
+                        y_position -= 40  # Ajustar para o começo da sessão
 
-    adicionar_sessao("1 - Informações do Sistema Operacional", "./output/txt_results/result_os.txt", pdf_content)
-    pdf_content.append(PageBreak())
-    adicionar_sessao("2 - Resultados de Consultas Oracle", "./output/txt_results/result_jdbc.txt", pdf_content)
-    pdf_content.append(PageBreak())
-    adicionar_graficos(pdf_content)
+                    # Desenha o texto adicional
+                    for linha in conteudo:
+                        c.drawString(72, y_position, linha.strip())
+                        y_position -= 20  # Desce a linha
 
-    doc.build(pdf_content)
+                        # Verifique se o conteúdo excede a página e diminua o tamanho da fonte
+                        if y_position < 72:  # Se o conteúdo ultrapassar a margem
+                            c.setFont("Helvetica", 10)  # Reduzir o tamanho da fonte
+                            y_position = 600  # Voltar para a posição inicial na mesma página
+                            c.drawString(72, y_position, linha.strip())  # Adiciona a linha na nova posição
+                            y_position -= 20  # Desce a linha novamente
 
-    merger = PdfMerger()
-    merger.append(capa_path)
-    merger.append(relatorio_path)
-    merger.write(relatorio_path)
-    merger.close()
+                    c.showPage()
+                    c.save()
+                    writer.append(pdf_path)
 
-    os.remove(capa_path)
+        with open(pdf_path, "wb") as output_file:
+            writer.write(output_file)
 
-    print(f"PDF gerado com sucesso: {relatorio_path}")
+        print(f"PDF atualizado gerado com sucesso: {pdf_path}")
+        return pdf_path
+   
+    except Exception as e:
+        print(f"Erro ao adicionar informações: {e}")
+        return None
 
+def manipular_pdf():
+    caminho_pdf = "./static/assets/Template de relatorio tauge.pdf"
+    
+    sessoes_mapear = ["INFORMAÇÕES DE SERVIDOR"]
+    arquivos_txt = {
+        "INFORMAÇÕES DE SERVIDOR": "./output/txt_results/result_os.txt",
+    }
+
+    sessoes = mapear_sessoes_pdf(caminho_pdf, sessoes_mapear)
+    
+    if not sessoes:
+        print("Nenhuma sessão mapeada no PDF.")
+        return
+    
+    pdf_atualizado = adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt)
+    
+    if pdf_atualizado:
+        print(f"Arquivo gerado: {pdf_atualizado}")
+    else:
+        print("Erro ao gerar o arquivo atualizado.")
 
 if __name__ == "__main__":
-    gerar_pdf()
+    manipular_pdf()
