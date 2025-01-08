@@ -1,16 +1,24 @@
 import jaydebeapi
 import concurrent.futures
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 ARQUIVO_SQL = "./sql/queries.sql"
-ARQUIVO_SAIDA = "./output/result_jdbc.txt"
+OUTPUT_DIRECTORY = "./output"
+TXT_RESULTS_DIRECTORY = os.path.join(OUTPUT_DIRECTORY, "txt_results")
+ARQUIVO_SAIDA = os.path.join(TXT_RESULTS_DIRECTORY, "result_jdbc.txt")
 JDBC_JAR = "./static/assets/ojdbc11.jar"
 URL = "jdbc:oracle:thin:@189.84.124.231:1521/orcl_pdb1"
 USER = "zbxtauge"
 PASSWORD = "zbxtauge"
+
+def criar_diretorio_resultados():
+    """Cria o diretório 'txt_results' caso não exista."""
+    os.makedirs(TXT_RESULTS_DIRECTORY, exist_ok=True)
+    logging.info(f"Diretório '{TXT_RESULTS_DIRECTORY}' verificado/criado.")
 
 def executar_comando_sql(conexao, comando, arquivo_saida):
     cursor = conexao.cursor()
@@ -33,6 +41,8 @@ def executar_comando_sql(conexao, comando, arquivo_saida):
         cursor.close()
 
 def executar_sql_e_conectar_oracle(arquivo_sql, arquivo_saida, jdbc_jar, url, user, password):
+    criar_diretorio_resultados()
+    
     with open(arquivo_sql, 'r', encoding='utf-8') as f:
         comandos_sql = [comando.strip() for comando in f.read().split(';') if comando.strip()]
 
@@ -65,7 +75,7 @@ def executar_sql():
     logging.info("Rota '/executar_sql' chamada.")
     try:
         executar_sql_e_conectar_oracle(ARQUIVO_SQL, ARQUIVO_SAIDA, JDBC_JAR, URL, USER, PASSWORD)
-        return jsonify({"mensagem": "Arquivo gerado com sucesso."}), 200
+        return jsonify({"mensagem": "Arquivo gerado com sucesso.", "caminho_arquivo": ARQUIVO_SAIDA}), 200
     except Exception as e:
         logging.error(f"Erro ao executar SQL: {e}")
         return jsonify({"erro": "Erro ao executar SQL"}), 500

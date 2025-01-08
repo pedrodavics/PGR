@@ -1,5 +1,5 @@
 import paramiko
-import shutil 
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from flask import Flask, send_file, jsonify, request
@@ -37,7 +37,6 @@ def process_command(ssh_client, command):
         return f"{result}\n\n"  
     return ""
 
-
 def generate_file():
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -71,9 +70,12 @@ output_directory = "./output"
 @app.route('/executar_comandos', methods=["GET"])
 def executar_comandos():
     if generate_file():
-        os.makedirs(output_directory, exist_ok=True)
+        # Criar subpasta "txt_results" dentro do diretório "output"
+        txt_results_directory = os.path.join(output_directory, "txt_results")
+        os.makedirs(txt_results_directory, exist_ok=True)
         
-        target_path = os.path.join(output_directory, output_file)
+        # Mover o arquivo para a subpasta "txt_results"
+        target_path = os.path.join(txt_results_directory, output_file)
         shutil.move(output_file, target_path)
 
         return jsonify({

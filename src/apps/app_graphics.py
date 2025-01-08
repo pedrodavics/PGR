@@ -5,7 +5,13 @@ from datetime import datetime, timedelta
 from flask import Flask, send_file, jsonify
 from pyzabbix import ZabbixAPI
 
-logging.basicConfig(filename='zabbix_data_processing.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configuração da pasta de logs
+log_dir = os.path.join(os.getcwd(), "logs")
+os.makedirs(log_dir, exist_ok=True)
+
+# Configuração de logging
+log_file = os.path.join(log_dir, "zabbix_data_processing.log")
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
 
@@ -28,20 +34,27 @@ def conectar_zabbix():
 
 def obter_graficos_por_grupo(zapi, group_id):
     try:
-        # Obter todos os hosts associados ao group_id
-        hosts = zapi.host.get(groupids=group_id, output=['hostid', 'name'])
-        
+        hosts = [
+            host for host in zapi.host.get(groupids=group_id, output=['hostid', 'name'])
+            if "Prod" in host['name']
+        ]
         if not hosts:
-            logging.error(f"Nenhum host encontrado para o grupo {group_id}.")
+            logging.error(f"Nenhum host contendo 'Prod' encontrado para o grupo {group_id}.")
             return []
-        
-        # Obter gráficos para os hosts encontrados
+
         graphs = []
         for host in hosts:
-            graphs.extend(zapi.graph.get(output=['graphid', 'name'], hostids=host['hostid']))
-        
+            host_graphs = zapi.graph.get(output=['graphid', 'name'], hostids=host['hostid'])
+
+            filtered_graphs = [
+                graph for graph in host_graphs
+                if "CPU - utilização" in graph['name'] or "Uso de Memória" in graph['name']
+            ]
+            
+            graphs.extend(filtered_graphs)
+
         if not graphs:
-            logging.error(f"Nenhum gráfico encontrado para o grupo {group_id}.")
+            logging.error(f"Nenhum gráfico válido encontrado para os hosts do grupo {group_id}.")
             return []
         
         return hosts, graphs
@@ -51,14 +64,8 @@ def obter_graficos_por_grupo(zapi, group_id):
 
 def obter_periodo_tres_meses():
     hoje = datetime.today()
-
-    # Primeiro dia do mês atual
     primeiro_dia_mes_atual = hoje.replace(day=1)
-
-    # Último dia do mês anterior ao mês atual
     ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
-
-    # Primeiro dia do mês 3 meses atrás
     primeiro_dia_tres_meses_atras = (primeiro_dia_mes_atual - timedelta(days=90)).replace(day=1)
 
     stime = int(primeiro_dia_tres_meses_atras.timestamp())
@@ -68,15 +75,10 @@ def obter_periodo_tres_meses():
 
 def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name):
     try:
-        # Obter o período dos últimos 3 meses
         desde, ate = obter_periodo_tres_meses()
-        
         logging.info(f"Período calculado: stime={desde}, etime={ate}")
 
-        # Construir a URL do gráfico com o período exato
         grafico_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={desde}&etime={ate}"
-        
-        # Caminho de salvamento
         grupo_dir = os.path.join(output_dir, f"graficos_{groupid}")
         os.makedirs(grupo_dir, exist_ok=True)
 
@@ -85,7 +87,6 @@ def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name):
         
         grafico_path = os.path.join(host_dir, f"grafico_{graphid}.png")
 
-        # Fazer o download do gráfico
         headers = {'Content-Type': 'application/json'}
         response = session.get(grafico_url, headers=headers, stream=True)
         if response.status_code == 200:
@@ -101,12 +102,10 @@ def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name):
         logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: {e}")
         return None
 
-
 @app.route('/baixar_graficos/<int:group_id>', methods=['GET'])
 def baixar_graficos(group_id):
     try:
         zapi = conectar_zabbix()
-
         hosts, graficos = obter_graficos_por_grupo(zapi, group_id)
 
         logging.info(f"Gráficos retornados para o grupo {group_id}: {graficos}")
@@ -116,7 +115,6 @@ def baixar_graficos(group_id):
         
         grafico_paths = []
 
-        # Autenticar via sessão para download dos gráficos
         session = requests.Session()
         session.post(f"{zabbix_url}/index.php", data={
             'name': zabbix_user,
@@ -126,8 +124,7 @@ def baixar_graficos(group_id):
 
         for host in hosts:
             for grafico in graficos:
-                grafico_path = baixar_grafico_zabbix_via_http(session, grafico['graphid'], group_id, host['name'])  
-
+                grafico_path = baixar_grafico_zabbix_via_http(session, grafico['graphid'], group_id, host['name'])
                 if grafico_path:
                     grafico_paths.append(grafico_path)
         
@@ -135,7 +132,6 @@ def baixar_graficos(group_id):
             return jsonify({"erro": "Falha ao baixar os gráficos."}), 500
         
         return send_file(grafico_paths[0], as_attachment=True)
-    
     except Exception as e:
         logging.error(f"Erro ao processar os gráficos: {e}")
         return jsonify({"erro": "Erro ao processar os gráficos."}), 500

@@ -1,3 +1,4 @@
+import os
 import re
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -24,15 +25,13 @@ def criar_capa(output_path):
     largura, altura = letter
     c = canvas.Canvas(output_path, pagesize=letter)
 
-    # Título principal
     c.setFont("Helvetica-Bold", 36)
-    c.drawCentredString(largura / 2, altura - 200, "Relatório Situacional")
+    c.drawCentredString(largura / 2, altura - 200, "Relatório Trimestral")
     c.setFont("Helvetica", 16)
     c.setFillColor(colors.grey)
 
-    # Logotipo
     try:
-        img_path = "tauge.jpeg"
+        img_path = "./static/images/tauge.jpeg"
         c.drawImage(img_path, largura / 2 - 2.5 * inch, altura / 2 - 1.25 * inch, width=5 * inch, height=2.5 * inch)
     except FileNotFoundError:
         c.setFont("Helvetica", 12)
@@ -50,7 +49,7 @@ def adicionar_sessao(titulo, arquivo, pdf_content):
         leading=22,
         fontName="Helvetica-Bold",
         textColor=colors.black,
-        alignment=1,  # Centralizado
+        alignment=1,  
         spaceAfter=10
     )
     titulo_formatado = Paragraph(titulo, titulo_style)
@@ -73,7 +72,7 @@ def adicionar_graficos(pdf_content):
     pdf_content.append(titulo)
     pdf_content.append(Spacer(1, 12))
 
-    graficos = ["grafico1.jpeg"]
+    graficos = ["./output/graficos_38/H.São Paulo - New Oracle Prod/grafico_4652.png"]
     imagem_size = 5 * inch
 
     for grafico in graficos:
@@ -87,16 +86,16 @@ def adicionar_graficos(pdf_content):
             pdf_content.append(erro)
 
 def gerar_pdf():
-    capa_path = "relatorio_capa.pdf"
-    output_path = "relatorio.pdf"
+    output_dir = "./output/pdf"
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Cria a capa
+    capa_path = "relatorio_capa.pdf"
+    relatorio_path = os.path.join(output_dir, "relatorio.pdf")
+
     criar_capa(capa_path)
 
-    # Configura o documento principal
-    doc = BaseDocTemplate(output_path, pagesize=letter)
+    doc = BaseDocTemplate(relatorio_path, pagesize=letter)
 
-    # Frames e Templates
     frame = Frame(
         doc.leftMargin, doc.bottomMargin + 0.5 * inch,
         doc.width, doc.height - 0.5 * inch, id='normal'
@@ -106,25 +105,24 @@ def gerar_pdf():
 
     pdf_content = []
 
-    # Conteúdo
-    adicionar_sessao("1 - Informações do Sistema Operacional", "sistema_info.txt", pdf_content)
+    adicionar_sessao("1 - Informações do Sistema Operacional", "./output/txt_results/result_os.txt", pdf_content)
     pdf_content.append(PageBreak())
-    adicionar_sessao("2 - Resultados de Consultas Oracle", "resultado_consulta.txt", pdf_content)
+    adicionar_sessao("2 - Resultados de Consultas Oracle", "./output/txt_results/result_jdbc.txt", pdf_content)
     pdf_content.append(PageBreak())
     adicionar_graficos(pdf_content)
 
-    # Constrói o PDF
     doc.build(pdf_content)
 
-    # Junta capa e conteúdo
     merger = PdfMerger()
     merger.append(capa_path)
-    merger.append(output_path)
-    merger.write(output_path)
+    merger.append(relatorio_path)
+    merger.write(relatorio_path)
     merger.close()
 
-    print(f"PDF gerado com sucesso: {output_path}")
+    os.remove(capa_path)
+
+    print(f"PDF gerado com sucesso: {relatorio_path}")
 
 
 if __name__ == "__main__":
-    gerar_pdf()  
+    gerar_pdf()
