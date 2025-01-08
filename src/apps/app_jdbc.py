@@ -18,8 +18,6 @@ def executar_comando_sql(conexao, comando, arquivo_saida):
         logging.info(f"Executando: {comando}")
         cursor.execute(comando)
         with open(arquivo_saida, 'a', encoding='utf-8') as f_saida:
-            f_saida.write(f"\nCOMANDO LIDO: {comando}\n")
-
             if cursor.description:
                 nomes_colunas = [col[0] for col in cursor.description]
                 f_saida.write('\t'.join(nomes_colunas) + '\n')
@@ -61,7 +59,7 @@ def executar_sql_e_conectar_oracle(arquivo_sql, arquivo_saida, jdbc_jar, url, us
 
 app = Flask(__name__)
 
-@app.route('/executar_sql', methods=['POST', 'GET'])
+@app.route('/executar_sql', methods=['GET'])
 def executar_sql():
     """Rota para executar o script SQL e gerar o arquivo."""
     logging.info("Rota '/executar_sql' chamada.")

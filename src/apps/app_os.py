@@ -16,7 +16,7 @@ output_file = "result_os.txt"
 
 commands = [
     "hostname",
-    "ifconfig",
+    "ifconfig | grep inet | awk '{ print $2 }'",
     "cat /etc/*release*",
     "free -m",
     "df -h",
@@ -34,8 +34,9 @@ def process_command(ssh_client, command):
     if command and not command.startswith("#"):
         print(f"Executando comando: {command}")
         result = run_remote_command(ssh_client, command)
-        return f"Comando: {command}\nSaída:\n{result}\n\n"
+        return f"{result}\n\n"  
     return ""
+
 
 def generate_file():
     ssh_client = paramiko.SSHClient()
@@ -67,7 +68,7 @@ def generate_file():
 
 output_directory = "./output"
 
-@app.route('/executar_comandos', methods=['POST', "GET"])
+@app.route('/executar_comandos', methods=["GET"])
 def executar_comandos():
     if generate_file():
         os.makedirs(output_directory, exist_ok=True)
