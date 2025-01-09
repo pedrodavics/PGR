@@ -1,120 +1,140 @@
 import os
-from PyPDF2 import PdfReader, PdfWriter
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-import re
+import logging
+import requests
+from datetime import datetime, timedelta
+from flask import Flask, send_file, jsonify
+from pyzabbix import ZabbixAPI
 
-def criar_subpasta_pdf():
-    output_dir = "./output/pdf"
-    os.makedirs(output_dir, exist_ok=True)
-    return output_dir
+logging.basicConfig(filename='zabbix_data_processing.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def limpar_texto(texto):
-    # Remover quebras de linha extras e espaços no início e no final
-    texto_limpo = texto.replace("\n", " ").strip()
-    # Remover múltiplos espaços consecutivos
-    texto_limpo = re.sub(r'\s+', ' ', texto_limpo)
-    return texto_limpo
+app = Flask(__name__)
 
-def mapear_sessoes_pdf(caminho_pdf, sessoes_mapear):
+zabbix_url = "http://10.85.104.3"
+zabbix_user = "tauge.suporte"
+zabbix_password = "Aehee4haen8Sa.f"
+
+output_dir = os.path.join(os.getcwd(), "output")
+os.makedirs(output_dir, exist_ok=True)
+
+def conectar_zabbix():
     try:
-        reader = PdfReader(caminho_pdf)
-        sessoes = {}
-        for i, page in enumerate(reader.pages):
-            texto = page.extract_text()
-            if texto:  # Verificar se o texto foi extraído
-                texto_limpo = limpar_texto(texto)  # Limpeza do texto extraído
-                print(f"Texto da página {i}: {texto_limpo[:300]}...")  # Exibir uma parte do texto limpo para depuração
-                for sessao in sessoes_mapear:
-                    if sessao.lower() in texto_limpo.lower():  # Ignorar maiúsculas/minúsculas
-                        sessoes[sessao] = i
-        return sessoes
+        zapi = ZabbixAPI(zabbix_url)
+        zapi.login(zabbix_user, zabbix_password)
+        logging.info(f"Conectado ao Zabbix API versão {zapi.api_version()}")
+        return zapi
     except Exception as e:
-        print(f"Erro ao mapear sessões: {e}")
-        return {}
+        logging.error(f"Erro ao conectar ao Zabbix: {e}")
+        raise
 
-def adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt):
-    output_dir = criar_subpasta_pdf()
-    pdf_path = os.path.join(output_dir, "relatorio_atualizado.pdf")
-    
+def obter_graficos_por_grupo(zapi, group_id):
     try:
-        reader = PdfReader(caminho_pdf)
-        writer = PdfWriter()
+        # Obter todos os hosts associados ao group_id
+        hosts = zapi.host.get(groupids=group_id, output=['hostid', 'name'])
         
-        for i, page in enumerate(reader.pages):
-            writer.add_page(page)
-            if i in sessoes.values():
-                # Adicionar novas informações a partir do arquivo .txt
-                sessao_nome = list(sessoes.keys())[list(sessoes.values()).index(i)]
-                arquivo_txt = arquivos_txt.get(sessao_nome)
-
-                if arquivo_txt:
-                    with open(arquivo_txt, "r", encoding="utf-8") as file:
-                        conteudo = file.readlines()
-
-                    # Criar o canvas para adicionar o texto
-                    c = canvas.Canvas(pdf_path, pagesize=letter)
-                    c.setFont("Helvetica", 12)
-                    c.setFillColor(colors.black)
-                    
-                    # Encontre a posição da sessão mapeada
-                    texto_pagina = page.extract_text()
-                    texto_limpo = limpar_texto(texto_pagina)
-                    posicao_sessao = texto_limpo.lower().find(sessao_nome.lower())
-                    
-                    # Calcula o ponto de inserção para o novo texto (logo abaixo da sessão)
-                    y_position = 600  # Posição inicial ajustada
-                    if posicao_sessao != -1:
-                        # Ajustar a posição vertical
-                        y_position -= 40  # Ajustar para o começo da sessão
-
-                    # Desenha o texto adicional
-                    for linha in conteudo:
-                        c.drawString(72, y_position, linha.strip())
-                        y_position -= 20  # Desce a linha
-
-                        # Verifique se o conteúdo excede a página e diminua o tamanho da fonte
-                        if y_position < 72:  # Se o conteúdo ultrapassar a margem
-                            c.setFont("Helvetica", 10)  # Reduzir o tamanho da fonte
-                            y_position = 600  # Voltar para a posição inicial na mesma página
-                            c.drawString(72, y_position, linha.strip())  # Adiciona a linha na nova posição
-                            y_position -= 20  # Desce a linha novamente
-
-                    c.showPage()
-                    c.save()
-                    writer.append(pdf_path)
-
-        with open(pdf_path, "wb") as output_file:
-            writer.write(output_file)
-
-        print(f"PDF atualizado gerado com sucesso: {pdf_path}")
-        return pdf_path
-   
+        if not hosts:
+            logging.error(f"Nenhum host encontrado para o grupo {group_id}.")
+            return []
+        
+        # Obter gráficos para os hosts encontrados
+        graphs = []
+        for host in hosts:
+            graphs.extend(zapi.graph.get(output=['graphid', 'name'], hostids=host['hostid']))
+        
+        if not graphs:
+            logging.error(f"Nenhum gráfico encontrado para o grupo {group_id}.")
+            return []
+        
+        return hosts, graphs
     except Exception as e:
-        print(f"Erro ao adicionar informações: {e}")
+        logging.error(f"Erro ao buscar gráficos para o grupo {group_id}: {e}")
+        return [], []
+
+def obter_periodo_mes_passado():
+    hoje = datetime.today()
+
+    primeiro_dia_mes_atual = hoje.replace(day=1)
+
+    ultimo_dia_mes_passado = primeiro_dia_mes_atual - timedelta(days=1)
+
+    primeiro_dia_mes_passado = ultimo_dia_mes_passado.replace(day=1)
+
+    stime = int(primeiro_dia_mes_passado.timestamp())
+    etime = int(ultimo_dia_mes_passado.replace(hour=23, minute=59, second= 59).timestamp())
+
+    return stime, etime
+
+def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name):
+    try:
+        # Obter o período do mês passado
+        desde, ate = obter_periodo_mes_passado()
+        
+        logging.info(f"Período calculado: stime={desde}, etime={ate}")
+
+        # Construir a URL do gráfico com o período exato
+        grafico_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={desde}&etime={ate}&period=2678400"
+        
+        # Caminho de salvamento
+        grupo_dir = os.path.join(output_dir, f"graficos_{groupid}")
+        os.makedirs(grupo_dir, exist_ok=True)
+
+        host_dir = os.path.join(grupo_dir, host_name)
+        os.makedirs(host_dir, exist_ok=True)
+        
+        grafico_path = os.path.join(host_dir, f"grafico_{graphid}.png")
+
+        # Fazer o download do gráfico
+        headers = {'Content-Type': 'application/json'}
+        response = session.get(grafico_url, headers=headers, stream=True)
+        if response.status_code == 200:
+            with open(grafico_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    f.write(chunk)
+            logging.info(f"Gráfico {graphid} do host {host_name} no grupo {groupid} salvo em {grafico_path}")
+            return grafico_path
+        else:
+            logging.error(f"Erro ao baixar o gráfico {graphid} para o host {host_name}: Status code {response.status_code}")
+            return None
+    except Exception as e:
+        logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: {e}")
         return None
 
-def manipular_pdf():
-    caminho_pdf = "./static/assets/Template de relatorio tauge.pdf"
-    
-    sessoes_mapear = ["INFORMAÇÕES DE SERVIDOR"]
-    arquivos_txt = {
-        "INFORMAÇÕES DE SERVIDOR": "./output/txt_results/result_os.txt",
-    }
+@app.route('/baixar_graficos/<int:group_id>', methods=['GET'])
+def baixar_graficos(group_id):
+    try:
+        zapi = conectar_zabbix()
 
-    sessoes = mapear_sessoes_pdf(caminho_pdf, sessoes_mapear)
-    
-    if not sessoes:
-        print("Nenhuma sessão mapeada no PDF.")
-        return
-    
-    pdf_atualizado = adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt)
-    
-    if pdf_atualizado:
-        print(f"Arquivo gerado: {pdf_atualizado}")
-    else:
-        print("Erro ao gerar o arquivo atualizado.")
+        hosts, graficos = obter_graficos_por_grupo(zapi, group_id)
 
-if __name__ == "__main__":
-    manipular_pdf()
+        logging.info(f"Gráficos retornados para o grupo {group_id}: {graficos}")
+
+        if not graficos:
+            return jsonify({"erro": "Não foi possível localizar gráficos para o grupo."}), 500
+        
+        grafico_paths = []
+
+        # Autenticar via sessão para download dos gráficos
+        session = requests.Session()
+        session.post(f"{zabbix_url}/index.php", data={
+            'name': zabbix_user,
+            'password': zabbix_password,
+            'enter': 'Sign in'
+        })
+
+        for host in hosts:
+            for grafico in graficos:
+                grafico_path = baixar_grafico_zabbix_via_http(session, grafico['graphid'], group_id, host['name'])  
+
+                if grafico_path:
+                    grafico_paths.append(grafico_path)
+        
+        if not grafico_paths:
+            return jsonify({"erro": "Falha ao baixar os gráficos."}), 500
+        
+        return send_file(grafico_paths[0], as_attachment=True)
+    
+    except Exception as e:
+        logging.error(f"Erro ao processar os gráficos: {e}")
+        return jsonify({"erro": "Erro ao processar os gráficos."}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)  

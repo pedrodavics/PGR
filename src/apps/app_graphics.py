@@ -4,14 +4,28 @@ import requests
 from datetime import datetime, timedelta
 from flask import Flask, send_file, jsonify
 from pyzabbix import ZabbixAPI
+import signal
+import atexit
 
-# Configuração da pasta de logs
 log_dir = os.path.join(os.getcwd(), "logs")
 os.makedirs(log_dir, exist_ok=True)
 
-# Configuração de logging
-log_file = os.path.join(log_dir, "zabbix_data_processing.log")
+log_file = os.path.join(log_dir, "zabbix.log")
 logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def limpar_logs():
+    if os.path.exists(log_file):
+        os.remove(log_file)
+        print(f"Arquivo de log {log_file} apagado.")
+
+atexit.register(limpar_logs)
+
+def signal_handler(signum, frame):
+    limpar_logs()
+    exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 app = Flask(__name__)
 
@@ -34,27 +48,18 @@ def conectar_zabbix():
 
 def obter_graficos_por_grupo(zapi, group_id):
     try:
-        hosts = [
-            host for host in zapi.host.get(groupids=group_id, output=['hostid', 'name'])
-            if "Prod" in host['name']
-        ]
+        hosts = zapi.host.get(groupids=group_id, output=['hostid', 'name'])
         if not hosts:
-            logging.error(f"Nenhum host contendo 'Prod' encontrado para o grupo {group_id}.")
+            logging.error(f"Nenhum host encontrado para o grupo {group_id}.")
             return []
 
         graphs = []
         for host in hosts:
             host_graphs = zapi.graph.get(output=['graphid', 'name'], hostids=host['hostid'])
-
-            filtered_graphs = [
-                graph for graph in host_graphs
-                if "CPU - utilização" in graph['name'] or "Uso de Memória" in graph['name']
-            ]
-            
-            graphs.extend(filtered_graphs)
+            graphs.extend(host_graphs)
 
         if not graphs:
-            logging.error(f"Nenhum gráfico válido encontrado para os hosts do grupo {group_id}.")
+            logging.error(f"Nenhum gráfico encontrado para os hosts do grupo {group_id}.")
             return []
         
         return hosts, graphs
@@ -64,12 +69,10 @@ def obter_graficos_por_grupo(zapi, group_id):
 
 def obter_periodo_tres_meses():
     hoje = datetime.today()
-    primeiro_dia_mes_atual = hoje.replace(day=1)
-    ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
-    primeiro_dia_tres_meses_atras = (primeiro_dia_mes_atual - timedelta(days=90)).replace(day=1)
+    tres_meses_atras = hoje - timedelta(days=90)
 
-    stime = int(primeiro_dia_tres_meses_atras.timestamp())
-    etime = int(ultimo_dia_mes_anterior.replace(hour=23, minute=59, second=59).timestamp())
+    stime = int(tres_meses_atras.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+    etime = int(hoje.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
 
     return stime, etime
 
@@ -79,12 +82,14 @@ def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name):
         logging.info(f"Período calculado: stime={desde}, etime={ate}")
 
         grafico_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={desde}&etime={ate}"
+        logging.info(f"URL do gráfico: {grafico_url}")
+
         grupo_dir = os.path.join(output_dir, f"graficos_{groupid}")
         os.makedirs(grupo_dir, exist_ok=True)
 
         host_dir = os.path.join(grupo_dir, host_name)
         os.makedirs(host_dir, exist_ok=True)
-        
+
         grafico_path = os.path.join(host_dir, f"grafico_{graphid}.png")
 
         headers = {'Content-Type': 'application/json'}
@@ -96,7 +101,7 @@ def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name):
             logging.info(f"Gráfico {graphid} do host {host_name} no grupo {groupid} salvo em {grafico_path}")
             return grafico_path
         else:
-            logging.error(f"Erro ao baixar o gráfico {graphid} para o host {host_name}: Status code {response.status_code}")
+            logging.error(f"Erro ao baixar o gráfico {graphid} para o host {host_name}: Status code {response.status_code}, resposta: {response.text}")
             return None
     except Exception as e:
         logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: {e}")

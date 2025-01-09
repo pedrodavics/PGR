@@ -8,3 +8,5 @@ jaydebeapi
 kaleido
 PyPDF2
 reportlab
+psycopg2-binary
+
