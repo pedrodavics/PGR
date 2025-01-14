@@ -53,16 +53,22 @@ def obter_graficos_por_grupo(zapi, group_id):
             logging.error(f"Nenhum host encontrado para o grupo {group_id}.")
             return []
 
+        filtered_hosts = [host for host in hosts if 'prod' in host['name'].lower()]
+        if not filtered_hosts:
+            logging.info(f"Nenhum host com 'prod' no nome encontrado no grupo {group_id}.")
+            return [], []
+
         graphs = []
-        for host in hosts:
+        for host in filtered_hosts:
             host_graphs = zapi.graph.get(output=['graphid', 'name'], hostids=host['hostid'])
-            graphs.extend(host_graphs)
+            filtered_graphs = [graph for graph in host_graphs if 'CPU - utilização' in graph['name'] or 'memória' in graph['name'].lower()]
+            graphs.extend(filtered_graphs)
 
         if not graphs:
-            logging.error(f"Nenhum gráfico encontrado para os hosts do grupo {group_id}.")
-            return []
-        
-        return hosts, graphs
+            logging.error(f"Nenhum gráfico relevante encontrado para os hosts do grupo {group_id}.")
+            return [], []
+
+        return filtered_hosts, graphs
     except Exception as e:
         logging.error(f"Erro ao buscar gráficos para o grupo {group_id}: {e}")
         return [], []
@@ -113,11 +119,9 @@ def baixar_graficos(group_id):
         zapi = conectar_zabbix()
         hosts, graficos = obter_graficos_por_grupo(zapi, group_id)
 
-        logging.info(f"Gráficos retornados para o grupo {group_id}: {graficos}")
-
         if not graficos:
-            return jsonify({"erro": "Não foi possível localizar gráficos para o grupo."}), 500
-        
+            return jsonify({"erro": "Não foi possível localizar gráficos relevantes para o grupo."}), 500
+
         grafico_paths = []
 
         session = requests.Session()
@@ -132,11 +136,11 @@ def baixar_graficos(group_id):
                 grafico_path = baixar_grafico_zabbix_via_http(session, grafico['graphid'], group_id, host['name'])
                 if grafico_path:
                     grafico_paths.append(grafico_path)
-        
+
         if not grafico_paths:
             return jsonify({"erro": "Falha ao baixar os gráficos."}), 500
-        
-        return send_file(grafico_paths[0], as_attachment=True)
+
+        return jsonify({"mensagem": "Gráficos baixados com sucesso.", "arquivos": grafico_paths}), 200
     except Exception as e:
         logging.error(f"Erro ao processar os gráficos: {e}")
         return jsonify({"erro": "Erro ao processar os gráficos."}), 500
