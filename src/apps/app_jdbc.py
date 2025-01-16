@@ -3,22 +3,25 @@ import concurrent.futures
 from flask import Flask, jsonify
 import logging
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-ARQUIVO_SQL = "scripts/sql/queries.sql"
-OUTPUT_DIRECTORY = "./output"
-TXT_RESULTS_DIRECTORY = os.path.join(OUTPUT_DIRECTORY, "txt_results")
-ARQUIVO_SAIDA = os.path.join(TXT_RESULTS_DIRECTORY, "result_jdbc.txt")
-JDBC_JAR = "./static/assets/ojdbc11.jar"
-URL = "jdbc:oracle:thin:@10.0.1.4:1521/WINT"
-USER = "zbxtauge"
-PASSWORD = "zbxtauge"
+sql_file = "src/scripts/sql/queries.sql"
+output_directory = "./output"
+reports_directory = os.path.join(output_directory, "reports")
+output_file = os.path.join(reports_directory, "result_jdbc.txt")
+jdbc_jar = os.getenv("JDBC_JAR")
+url = os.getenv("URL_JDBC")
+user = os.getenv("USER_JDBC")
+password = os.getenv("PASS-JDBC")
 
 def criar_diretorio_resultados():
     """Cria o diretório 'txt_results' caso não exista."""
-    os.makedirs(TXT_RESULTS_DIRECTORY, exist_ok=True)
-    logging.info(f"Diretório '{TXT_RESULTS_DIRECTORY}' verificado/criado.")
+    os.makedirs(reports_directory, exist_ok=True)
+    logging.info(f"Diretório '{reports_directory}' verificado/criado.")
 
 def executar_comando_sql(conexao, comando, arquivo_saida):
     cursor = conexao.cursor()
@@ -40,10 +43,10 @@ def executar_comando_sql(conexao, comando, arquivo_saida):
     finally:
         cursor.close()
 
-def executar_sql_e_conectar_oracle(arquivo_sql, arquivo_saida, jdbc_jar, url, user, password):
+def executar_sql_e_conectar_oracle(sql_file, arquivo_saida, jdbc_jar, url, user, password):
     criar_diretorio_resultados()
     
-    with open(arquivo_sql, 'r', encoding='utf-8') as f:
+    with open(sql_file, 'r', encoding='utf-8') as f:
         comandos_sql = [comando.strip() for comando in f.read().split(';') if comando.strip()]
 
     try:
@@ -74,8 +77,8 @@ def executar_sql():
     """Rota para executar o script SQL e gerar o arquivo."""
     logging.info("Rota '/executar_sql' chamada.")
     try:
-        executar_sql_e_conectar_oracle(ARQUIVO_SQL, ARQUIVO_SAIDA, JDBC_JAR, URL, USER, PASSWORD)
-        return jsonify({"mensagem": "Arquivo gerado com sucesso.", "caminho_arquivo": ARQUIVO_SAIDA}), 200
+        executar_sql_e_conectar_oracle(sql_file, output_file, jdbc_jar, url, user, password)
+        return jsonify({"mensagem": "Arquivo gerado com sucesso.", "caminho_arquivo": output_file}), 200
     except Exception as e:
         logging.error(f"Erro ao executar SQL: {e}")
         return jsonify({"erro": "Erro ao executar SQL"}), 500

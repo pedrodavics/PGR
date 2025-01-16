@@ -1,12 +1,10 @@
 pandas
 numpy
-plotly
 pyzabbix
-scipy
 flask
 jaydebeapi
-kaleido
 PyPDF2
 reportlab
 psycopg2-binary
+python-dotenv
 

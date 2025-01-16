@@ -4,16 +4,19 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from flask import Flask, send_file, jsonify, request
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-host = "189.84.124.231"
-port = 2222
-username = "root"
-password = "b4rr1o2803"
+host = os.getenv("HOST")
+port = os.getenv("PORT")
+username = os.getenv("USER_OS")
+password = os.getenv("PASS_OS")
 
 output_file = "result_os.txt"
-commands_file = "scripts/executable/commands.sh"  
+commands_file = "src/scripts/executable/commands.sh"  
 
 def read_commands_from_file(filename):
     try:
@@ -24,7 +27,6 @@ def read_commands_from_file(filename):
         print(f"Erro ao ler o arquivo de comandos: {e}")
         return []
 
-# Lê os comandos do arquivo
 commands = read_commands_from_file(commands_file)
 
 def run_remote_command(ssh_client, command):
@@ -73,7 +75,7 @@ output_directory = "./output"
 @app.route('/executar_comandos', methods=["GET"])
 def executar_comandos():
     if generate_file():
-        txt_results_directory = os.path.join(output_directory, "txt_results")
+        txt_results_directory = os.path.join(output_directory, "reports")
         os.makedirs(txt_results_directory, exist_ok=True)
     
         target_path = os.path.join(txt_results_directory, output_file)

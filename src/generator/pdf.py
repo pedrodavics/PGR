@@ -5,7 +5,7 @@ from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
-def criar_subpasta_pdf(output_dir="./output/pdf"):
+def criar_subpasta_pdf(output_dir="./output/reports/pdf"):
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -43,7 +43,7 @@ def adicionar_texto_ao_pdf(c, texto, x_start, y_start):
     for linha in texto:
         c.drawString(x_start, y_start, linha.strip())
         y_start -= 12
-        if y_start < 50:  # Evitar que o texto ultrapasse o limite da página
+        if y_start < 50:  
             break
     return y_start
 
@@ -141,7 +141,7 @@ def manipular_pdf():
     sessoes_mapear = ["INFORMAÇÕES DE SERVIDOR", "9.1 Memória", "9.2 CPU"]
 
     arquivos_txt = {
-        "INFORMAÇÕES DE SERVIDOR": "./output/txt_results/result_os.txt",
+        "INFORMAÇÕES DE SERVIDOR": "./output/reports/result_os.txt",
     }
 
     output_dir = criar_subpasta_pdf()

@@ -4,6 +4,9 @@ import requests
 from datetime import datetime, timedelta
 from flask import Flask, jsonify
 from pyzabbix import ZabbixAPI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configuração de logs
 log_dir = os.path.join(os.getcwd(), "logs")
@@ -21,9 +24,9 @@ output_dir = os.path.join(os.getcwd(), "output")
 os.makedirs(output_dir, exist_ok=True)
 
 # Configurações do Zabbix
-zabbix_url = "http://10.85.104.3"
-zabbix_user = "tauge.suporte"
-zabbix_password = "Aehee4haen8Sa.f"
+zabbix_url = os.getenv("URL_ZABBIX")
+zabbix_user = os.getenv("USER_ZABBIX")
+zabbix_password = os.getenv("PASS_ZABBIX")
 
 # Função para conectar ao Zabbix
 def conectar_zabbix():
@@ -47,7 +50,7 @@ def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name, stime, 
     logging.info(f"URL gerado para o gráfico: {grafico_url}")
     response = session.get(grafico_url, stream=True)
     if response.status_code == 200:
-        grupo_dir = os.path.join(output_dir, f"graficos_{groupid}")
+        grupo_dir = os.path.join(output_dir, f"images")
         os.makedirs(grupo_dir, exist_ok=True)
 
         host_dir = os.path.join(grupo_dir, host_name)
