@@ -13,15 +13,19 @@ username = "root"
 password = "b4rr1o2803"
 
 output_file = "result_os.txt"
+commands_file = "scripts/executable/commands.sh"  
 
-commands = [
-    "hostname",
-    "ifconfig | grep inet | awk '{ print $2 }'",
-    "cat /etc/*release*",
-    "free -m",
-    "df -h",
-    "free -h"
-]
+def read_commands_from_file(filename):
+    try:
+        with open(filename, "r") as file:
+            commands = [line.strip() for line in file.readlines() if line.strip() and not line.startswith("#")]
+        return commands
+    except Exception as e:
+        print(f"Erro ao ler o arquivo de comandos: {e}")
+        return []
+
+# Lê os comandos do arquivo
+commands = read_commands_from_file(commands_file)
 
 def run_remote_command(ssh_client, command):
     stdin, stdout, stderr = ssh_client.exec_command(command)
@@ -47,7 +51,6 @@ def generate_file():
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             with open(output_file, "w") as output:
-                output.write(f"Data e hora: {datetime.now()}\n\n")
                 futures = [executor.submit(process_command, ssh_client, command) for command in commands]
 
                 for future in futures:
@@ -70,11 +73,9 @@ output_directory = "./output"
 @app.route('/executar_comandos', methods=["GET"])
 def executar_comandos():
     if generate_file():
-        # Criar subpasta "txt_results" dentro do diretório "output"
         txt_results_directory = os.path.join(output_directory, "txt_results")
         os.makedirs(txt_results_directory, exist_ok=True)
-        
-        # Mover o arquivo para a subpasta "txt_results"
+    
         target_path = os.path.join(txt_results_directory, output_file)
         shutil.move(output_file, target_path)
 

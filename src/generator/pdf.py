@@ -96,7 +96,7 @@ def adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt, output_dir, log_pa
                         salvar_log(log_path, f"Tentando adicionar gráfico de memória.")
                         y_position = adicionar_imagem_ao_pdf(
                             c,
-                            "./output/graficos_38/H.São Paulo - New Oracle Prod/grafico_4656.png",
+                            "output/graficos_10637/H.São Paulo - Oracle Prod/grafico_4656.png",
                             x_start=72,
                             y_start=y_position,
                             img_width=500,
@@ -107,7 +107,7 @@ def adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt, output_dir, log_pa
                         salvar_log(log_path, f"Tentando adicionar gráfico de CPU.")
                         y_position = adicionar_imagem_ao_pdf(
                             c,
-                            "./output/graficos_38/H.São Paulo - New Oracle Prod/grafico_4652.png",
+                            "output/graficos_10637/H.São Paulo - Oracle Prod/grafico_4652.png",
                             x_start=72,
                             y_start=y_position,
                             img_width=500,

@@ -6,12 +6,12 @@ import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-ARQUIVO_SQL = "./sql/queries.sql"
+ARQUIVO_SQL = "scripts/sql/queries.sql"
 OUTPUT_DIRECTORY = "./output"
 TXT_RESULTS_DIRECTORY = os.path.join(OUTPUT_DIRECTORY, "txt_results")
 ARQUIVO_SAIDA = os.path.join(TXT_RESULTS_DIRECTORY, "result_jdbc.txt")
 JDBC_JAR = "./static/assets/ojdbc11.jar"
-URL = "jdbc:oracle:thin:@189.84.124.231:1521/orcl_pdb1"
+URL = "jdbc:oracle:thin:@10.0.1.4:1521/WINT"
 USER = "zbxtauge"
 PASSWORD = "zbxtauge"
 

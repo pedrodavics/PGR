@@ -49,10 +49,6 @@ try:
         "Porta SSH": "porta_ssh"
     }, inplace=True)
 
-    df.drop(columns={
-
-        
-    }})
 
     print("Colunas após renomeação:", df.columns.tolist())
 
