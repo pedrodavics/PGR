@@ -2,14 +2,17 @@ import os
 import pandas as pd
 import psycopg2
 import subprocess
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configurações do banco de dados
-host = "10.85.104.6"
-port = "5432"
-dbname = "dbreport"
-user = "tgreport"
-password = "tgreport"
-csv_file = "./static/csv/base de clientes.csv"
+host = os.getenv("HOST_DB")
+port = os.getenv("PORT_DB")
+dbname = os.getenv("NAME_DB")
+user = os.getenv("USER_DB")
+password = os.getenv("PASS_DB")
+csv_file = os.getenv("FILE_DB")
 db_folder = "integration/.db/"
 
 # Garantir que a pasta db dentro de integration seja criada

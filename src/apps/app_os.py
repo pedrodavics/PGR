@@ -10,8 +10,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
-host = os.getenv("HOST")
-port = os.getenv("PORT")
+host = os.getenv("HOST_OS")
+port = os.getenv("PORT_OS")
 username = os.getenv("USER_OS")
 password = os.getenv("PASS_OS")
 

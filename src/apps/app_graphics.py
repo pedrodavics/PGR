@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 from flask import Flask, jsonify
 from pyzabbix import ZabbixAPI
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
-# Configuração de logs
 log_dir = os.path.join(os.getcwd(), "logs")
 os.makedirs(log_dir, exist_ok=True)
 
@@ -19,59 +19,61 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Diretório de saída
 output_dir = os.path.join(os.getcwd(), "output")
 os.makedirs(output_dir, exist_ok=True)
 
-# Configurações do Zabbix
 zabbix_url = os.getenv("URL_ZABBIX")
 zabbix_user = os.getenv("USER_ZABBIX")
 zabbix_password = os.getenv("PASS_ZABBIX")
 
-# Função para conectar ao Zabbix
 def conectar_zabbix():
     zapi = ZabbixAPI(zabbix_url)
     zapi.login(zabbix_user, zabbix_password)
     logging.info(f"Conectado ao Zabbix API versão {zapi.api_version()}")
     return zapi
 
-# Função para obter o período dos últimos 3 meses
 def obter_periodo_tres_meses():
     hoje = datetime.today()
     tres_meses_atras = hoje - timedelta(days=90)
+    
     stime = int(tres_meses_atras.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
     etime = int(hoje.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
+    
     logging.info(f"Período dos últimos 3 meses: {tres_meses_atras.date()} até {hoje.date()}")
     return stime, etime
 
-# Função para baixar o gráfico do Zabbix com período definido
-def baixar_grafico_zabbix_via_http(session, graphid, groupid, host_name, stime, etime):
+def baixar_grafico_zabbix_via_http(session, graphid, graph_name, host_name, stime, etime):
     grafico_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={stime}&etime={etime}"
-    logging.info(f"URL gerado para o gráfico: {grafico_url}")
-    response = session.get(grafico_url, stream=True)
-    if response.status_code == 200:
-        grupo_dir = os.path.join(output_dir, f"images")
-        os.makedirs(grupo_dir, exist_ok=True)
-
-        host_dir = os.path.join(grupo_dir, host_name)
+    logging.info(f"URL gerado para o gráfico {graphid} do host {host_name}: {grafico_url}")
+    try:
+        response = session.get(grafico_url, stream=True)
+        response.raise_for_status()
+        
+        host_dir = os.path.join(output_dir, host_name)
         os.makedirs(host_dir, exist_ok=True)
 
-        grafico_path = os.path.join(host_dir, f"grafico_{graphid}.png")
+        # Nome do arquivo com base no tipo do gráfico
+        if "memória" in graph_name.lower():
+            filename = "grafico_memoria.png"
+        elif "CPU - utilização" in graph_name:
+            filename = "grafico_cpu.png"
+        else:
+            filename = f"grafico_{graphid}.png"
+
+        grafico_path = os.path.join(host_dir, filename)
         with open(grafico_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=1024):
                 f.write(chunk)
 
         logging.info(f"Gráfico {graphid} do host {host_name} salvo em {grafico_path}")
         return grafico_path
-    else:
-        logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: Status code {response.status_code}")
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: {e}")
         return None
 
-
-# Inicialização do Flask
 app = Flask(__name__)
 
-# Endpoint para baixar gráficos
 @app.route('/baixar_graficos/<int:host_id>', methods=['GET'])
 def baixar_graficos(host_id):
     try:
@@ -95,10 +97,15 @@ def baixar_graficos(host_id):
         stime, etime = obter_periodo_tres_meses()
 
         grafico_paths = []
-        for grafico in graficos_relevantes:
-            grafico_path = baixar_grafico_zabbix_via_http(session, grafico['graphid'], host_id, host_name, stime, etime)
-            if grafico_path:
-                grafico_paths.append(grafico_path)
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [
+                executor.submit(baixar_grafico_zabbix_via_http, session, grafico['graphid'], grafico['name'], host_name, stime, etime)
+                for grafico in graficos_relevantes
+            ]
+            for future in futures:
+                result = future.result()
+                if result:
+                    grafico_paths.append(result)
 
         if not grafico_paths:
             return jsonify({"erro": "Falha ao baixar os gráficos."}), 500
@@ -109,6 +116,5 @@ def baixar_graficos(host_id):
         logging.error(f"Erro ao processar os gráficos: {e}")
         return jsonify({"erro": "Erro ao processar os gráficos."}), 500
 
-# Inicialização do servidor Flask
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
