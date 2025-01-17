@@ -1,98 +1,90 @@
 import os
 import pandas as pd
 import psycopg2
-import subprocess
-from dotenv import load_dotenv
+from tkinter import Tk, Label, Button, StringVar, OptionMenu, messagebox
+from dotenv import load_dotenv, set_key
 
+# Carregar variáveis do .env
 load_dotenv()
 
-# Configurações do banco de dados
 host = os.getenv("HOST_DB")
 port = os.getenv("PORT_DB")
 dbname = os.getenv("NAME_DB")
 user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
-csv_file = os.getenv("FILE_DB")
-db_folder = "integration/.db/"
 
-# Garantir que a pasta db dentro de integration seja criada
-os.makedirs(db_folder, exist_ok=True)
-
-try:
-    # Conectar ao banco de dados
-    connection = psycopg2.connect(
-        host=host,
-        port=port,
-        dbname=dbname,
-        user=user,
-        password=password
-    )
-    cursor = connection.cursor()
-
-    # Criar tabela nome_do_cliente
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS nome_do_cliente (
-            nome_do_cliente TEXT PRIMARY KEY,
-            chave_de_ip TEXT,
-            grupo_id INTEGER,
-            porta_ssh INTEGER
-        );
-    """)
-    connection.commit()
-
-    # Carregar dados do arquivo CSV
-    df = pd.read_csv(csv_file)
-    print("Colunas no arquivo CSV:", df.columns.tolist())
-
-    # Renomear colunas para o padrão esperado pelo banco de dados
-    df.rename(columns={
-        "Nome do cliente": "nome_do_cliente",
-        "Chave de IP": "chave_de_ip",
-        "Grupo ID": "grupo_id",
-        "Porta SSH": "porta_ssh"
-    }, inplace=True)
-
-
-    print("Colunas após renomeação:", df.columns.tolist())
-
-    # Verificar se todas as colunas necessárias estão presentes
-    required_columns = ["nome_do_cliente", "chave_de_ip", "grupo_id", "porta_ssh"]
-    if not all(col in df.columns for col in required_columns):
-        raise ValueError(f"As colunas obrigatórias estão ausentes no CSV. Esperado: {required_columns}")
-
-    # Inserir dados no banco de dados
-    for _, row in df.iterrows():
-        insert_query = """
-        INSERT INTO nome_do_cliente (nome_do_cliente, chave_de_ip, grupo_id, porta_ssh)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (nome_do_cliente) DO NOTHING;
-        """
-        cursor.execute(
-            insert_query,
-            (row["nome_do_cliente"], row["chave_de_ip"], row["grupo_id"], row["porta_ssh"])
+def fetch_client_names():
+    try:
+        connection = psycopg2.connect(
+            host=host,
+            port=port,
+            dbname=dbname,
+            user=user,
+            password=password
         )
-    connection.commit()
-
-    # Exibir os dados da tabela
-    cursor.execute("SELECT * FROM nome_do_cliente;")
-    rows = cursor.fetchall()
-    for row in rows:
-        print(row)
-
-except Exception as e:
-    print(f"Erro durante a execução: {e}")
-
-finally:
-    # Fechar a conexão com o banco de dados
-    if 'connection' in locals() and connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT nome FROM tb_cliente;")
+        client_names = [row[0] for row in cursor.fetchall()]
         connection.close()
+        return client_names
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao conectar ao banco de dados: {e}")
+        return []
 
-# Exportar o banco de dados para a pasta db dentro de integration
-backup_file = os.path.join(db_folder, f"{dbname}_backup.sql")
-export_command = f"pg_dump -h {host} -p {port} -U {user} -F c -b -v -f {backup_file} {dbname}"
+def fetch_client_details(selected_client):
+    try:
+        connection = psycopg2.connect(
+            host=host,
+            port=port,
+            dbname=dbname,
+            user=user,
+            password=password
+        )
+        cursor = connection.cursor()
+        query = "SELECT ip, portassh, idhostzbx FROM tb_cliente WHERE nome = %s;"
+        cursor.execute(query, (selected_client,))
+        details = cursor.fetchone()
+        connection.close()
+        return details if details else None
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao buscar detalhes do cliente: {e}")
+        return None
 
-try:
-    subprocess.run(export_command, shell=True, check=True, env={"PGPASSWORD": password})
-    print(f"Backup exportado com sucesso para: {backup_file}")
-except subprocess.CalledProcessError as e:
-    print(f"Erro ao exportar o banco de dados: {e}")
+def update_env_file(ip, port, id_zabbix):
+    """Atualiza as variáveis no arquivo .env"""
+    set_key(".env", "HOST_OS", ip)
+    set_key(".env", "PORT_OS", str(port))  
+    set_key(".env", "ID_ZABBIX", str(id_zabbix))  
+    load_dotenv()
+
+def on_select_client(*args):
+    selected_client = selected_client_var.get()
+    if selected_client:
+        details = fetch_client_details(selected_client)
+        if details:
+            ip, port, id_zabbix = details
+            update_env_file(ip, port, id_zabbix)
+
+            details_text = f"IP: {ip}\nPorta: {port}\nID Zabbix: {id_zabbix}"
+            messagebox.showinfo("Detalhes do Cliente", details_text)
+        else:
+            messagebox.showwarning("Aviso", f"Cliente '{selected_client}' não encontrado.")
+
+root = Tk()
+root.title("Clientes do Banco de Dados")
+
+selected_client_var = StringVar(root)
+selected_client_var.set("Selecione um cliente")
+
+client_names = fetch_client_names()
+
+if client_names:
+    Label(root, text="Clientes disponíveis:").pack(pady=10)
+    client_menu = OptionMenu(root, selected_client_var, *client_names)
+    client_menu.pack(pady=10)
+
+    Button(root, text="Exibir Detalhes e Atualizar .env", command=on_select_client).pack(pady=20)
+else:
+    Label(root, text="Nenhum cliente disponível no banco de dados.").pack(pady=20)
+
+root.mainloop()

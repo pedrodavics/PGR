@@ -16,7 +16,7 @@ output_file = os.path.join(reports_directory, "result_jdbc.txt")
 jdbc_jar = os.getenv("JAR_JDBC")
 url = os.getenv("URL_JDBC")
 user = os.getenv("USER_JDBC")
-password = os.getenv("PASS-JDBC")
+password = os.getenv("PASS_JDBC")
 
 def criar_diretorio_resultados():
     """Cria o diretório 'txt_results' caso não exista."""

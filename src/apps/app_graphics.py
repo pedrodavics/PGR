@@ -19,12 +19,13 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-output_dir = os.path.join(os.getcwd(), "output")
-os.makedirs(output_dir, exist_ok=True)
+output_dir = os.path.join(os.getcwd(), "output", "images")
+os.makedirs(output_dir, exist_ok=True)  
 
 zabbix_url = os.getenv("URL_ZABBIX")
 zabbix_user = os.getenv("USER_ZABBIX")
 zabbix_password = os.getenv("PASS_ZABBIX")
+host_id = os.getenv("ID_ZABBIX")  
 
 def conectar_zabbix():
     zapi = ZabbixAPI(zabbix_url)
@@ -49,18 +50,14 @@ def baixar_grafico_zabbix_via_http(session, graphid, graph_name, host_name, stim
         response = session.get(grafico_url, stream=True)
         response.raise_for_status()
         
-        host_dir = os.path.join(output_dir, host_name)
-        os.makedirs(host_dir, exist_ok=True)
-
-        # Nome do arquivo com base no tipo do gráfico
         if "memória" in graph_name.lower():
-            filename = "grafico_memoria.png"
+            filename = f"grafico_memoria.png"
         elif "CPU - utilização" in graph_name:
-            filename = "grafico_cpu.png"
+            filename = f"grafico_cpu.png"
         else:
             filename = f"grafico_{graphid}.png"
 
-        grafico_path = os.path.join(host_dir, filename)
+        grafico_path = os.path.join(output_dir, filename)
         with open(grafico_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=1024):
                 f.write(chunk)
@@ -74,9 +71,12 @@ def baixar_grafico_zabbix_via_http(session, graphid, graph_name, host_name, stim
 
 app = Flask(__name__)
 
-@app.route('/baixar_graficos/<int:host_id>', methods=['GET'])
-def baixar_graficos(host_id):
+@app.route('/baixar_graficos', methods=['GET'])
+def baixar_graficos():
     try:
+        if not host_id:
+            return jsonify({"erro": "HOST_ID não encontrado nas variáveis de ambiente."}), 400
+
         zapi = conectar_zabbix()
         host = zapi.host.get(hostids=host_id, output=['hostid', 'name'])
         if not host:
@@ -117,4 +117,4 @@ def baixar_graficos(host_id):
         return jsonify({"erro": "Erro ao processar os gráficos."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True, use_reloader=False)  

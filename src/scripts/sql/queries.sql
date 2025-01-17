@@ -68,3 +68,13 @@ group by o.session_recid, o.session_stamp)
 ro on ro.session_recid = j.session_recid and ro.session_stamp = j.session_stamp
 where j.start_time > trunc(sysdate)-7
 order by j.start_time;
+
+SELECT TRUNC(EF.DT_COLETA) AS DT_COLETA
+, SUM(EF.ESPACO_OCUPADO) AS BYTES_OCUPADOS
+, ROUND(SUM(EF.ESPACO_OCUPADO)/1024) AS KBYTES_OCUPADOS
+, ROUND(SUM(EF.ESPACO_OCUPADO)/1024/1024) AS MBYTES_OCUPADOS
+, ROUND(SUM(EF.ESPACO_OCUPADO)/1024/1024/1024) AS GBYTES_OCUPADOS
+FROM GER_ESPACO_FILE_NAME EF
+WHERE to_char(EF.DT_COLETA,'YYYY') in ('2024','2025', '2026', '2027','2028', '2029','2030')
+GROUP BY TRUNC(EF.DT_COLETA)
+ORDER BY DT_COLETA
