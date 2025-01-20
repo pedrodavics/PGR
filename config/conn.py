@@ -1,19 +1,41 @@
 import os
 import pandas as pd
 import psycopg2
-from tkinter import Tk, Label, Button, StringVar, OptionMenu, messagebox
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
+import gspread
+from google.oauth2.service_account import Credentials
 
-# Carregar variáveis do .env
 load_dotenv()
 
+# Carregar variáveis de ambiente
 host = os.getenv("HOST_DB")
 port = os.getenv("PORT_DB")
 dbname = os.getenv("NAME_DB")
 user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
 
-def fetch_client_names():
+# Variáveis do Google Sheets
+sheet_url = os.getenv("URL_SHEET")
+sheet_name = os.getenv("NAME_SHEET")
+
+def fetch_data_from_sheets(sheet_url, sheet_name):
+    try:
+        scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+        creds = Credentials.from_service_account_file("credenciais.json", scopes=scopes)
+        client = gspread.authorize(creds)
+        
+        sheet = client.open_by_url(sheet_url)
+        worksheet = sheet.worksheet(sheet_name)
+        data = worksheet.get_all_records()
+
+        df = pd.DataFrame(data)
+        return df
+    
+    except Exception as e:
+        print(f"Erro ao carregar dados do Google Sheets: {e}")
+        return pd.DataFrame()
+
+def load_data_into_db(df):
     try:
         connection = psycopg2.connect(
             host=host,
@@ -23,68 +45,37 @@ def fetch_client_names():
             password=password
         )
         cursor = connection.cursor()
-        cursor.execute("SELECT nome FROM tb_cliente;")
-        client_names = [row[0] for row in cursor.fetchall()]
+
+        for _, row in df.iterrows():
+            query = """
+                INSERT INTO tb_cliente (nome, ip, portassh, tpbanco, portabanco, idhostzbx)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (nome) DO UPDATE
+                SET ip = EXCLUDED.ip,
+                    portassh = EXCLUDED.portassh,
+                    tpbanco = EXCLUDED.tpbanco,
+                    portabanco = EXCLUDED.portabanco,
+                    idhostzbx = EXCLUDED.idhostzbx
+                WHERE tb_cliente.ip != EXCLUDED.ip
+                   OR tb_cliente.portassh != EXCLUDED.portassh
+                   OR tb_cliente.tpbanco != EXCLUDED.tpbanco
+                   OR tb_cliente.portabanco != EXCLUDED.portabanco
+                   OR tb_cliente.idhostzbx != EXCLUDED.idhostzbx;
+            """
+            cursor.execute(query, (row["nome"], row["ip"], row["portassh"], row["tpbanco"], row["portabanco"], row["idhostzbx"]))
+
+        connection.commit()
         connection.close()
-        return client_names
+
+        print("Dados inseridos/atualizados no banco de dados com sucesso!")
+
     except Exception as e:
-        messagebox.showerror("Erro", f"Erro ao conectar ao banco de dados: {e}")
-        return []
+        print(f"Erro ao inserir/atualizar dados no banco de dados: {e}")
 
-def fetch_client_details(selected_client):
-    try:
-        connection = psycopg2.connect(
-            host=host,
-            port=port,
-            dbname=dbname,
-            user=user,
-            password=password
-        )
-        cursor = connection.cursor()
-        query = "SELECT ip, portassh, idhostzbx FROM tb_cliente WHERE nome = %s;"
-        cursor.execute(query, (selected_client,))
-        details = cursor.fetchone()
-        connection.close()
-        return details if details else None
-    except Exception as e:
-        messagebox.showerror("Erro", f"Erro ao buscar detalhes do cliente: {e}")
-        return None
+if __name__ == "__main__":
+    df = fetch_data_from_sheets(sheet_url, sheet_name)
 
-def update_env_file(ip, port, id_zabbix):
-    """Atualiza as variáveis no arquivo .env"""
-    set_key(".env", "HOST_OS", ip)
-    set_key(".env", "PORT_OS", str(port))  
-    set_key(".env", "ID_ZABBIX", str(id_zabbix))  
-    load_dotenv()
-
-def on_select_client(*args):
-    selected_client = selected_client_var.get()
-    if selected_client:
-        details = fetch_client_details(selected_client)
-        if details:
-            ip, port, id_zabbix = details
-            update_env_file(ip, port, id_zabbix)
-
-            details_text = f"IP: {ip}\nPorta: {port}\nID Zabbix: {id_zabbix}"
-            messagebox.showinfo("Detalhes do Cliente", details_text)
-        else:
-            messagebox.showwarning("Aviso", f"Cliente '{selected_client}' não encontrado.")
-
-root = Tk()
-root.title("Clientes do Banco de Dados")
-
-selected_client_var = StringVar(root)
-selected_client_var.set("Selecione um cliente")
-
-client_names = fetch_client_names()
-
-if client_names:
-    Label(root, text="Clientes disponíveis:").pack(pady=10)
-    client_menu = OptionMenu(root, selected_client_var, *client_names)
-    client_menu.pack(pady=10)
-
-    Button(root, text="Exibir Detalhes e Atualizar .env", command=on_select_client).pack(pady=20)
-else:
-    Label(root, text="Nenhum cliente disponível no banco de dados.").pack(pady=20)
-
-root.mainloop()
+    if not df.empty:
+        load_data_into_db(df)
+    else:
+        print("Nenhum dado encontrado na planilha.")

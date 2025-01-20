@@ -1,10 +1,10 @@
 import os
 import logging
-import requests
 from datetime import datetime, timedelta
 from flask import Flask, jsonify
 from pyzabbix import ZabbixAPI
 from dotenv import load_dotenv
+import requests
 from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
@@ -20,101 +20,105 @@ logging.basicConfig(
 )
 
 output_dir = os.path.join(os.getcwd(), "output", "images")
-os.makedirs(output_dir, exist_ok=True)  
+os.makedirs(output_dir, exist_ok=True)
 
 zabbix_url = os.getenv("URL_ZABBIX")
 zabbix_user = os.getenv("USER_ZABBIX")
 zabbix_password = os.getenv("PASS_ZABBIX")
-host_id = os.getenv("ID_ZABBIX")  
+host_id = os.getenv("ID_ZABBIX")
 
-def conectar_zabbix():
+def connect_zabbix():
     zapi = ZabbixAPI(zabbix_url)
     zapi.login(zabbix_user, zabbix_password)
-    logging.info(f"Conectado ao Zabbix API versão {zapi.api_version()}")
+    logging.info(f"Connected to Zabbix API version {zapi.api_version()}")
     return zapi
 
-def obter_periodo_tres_meses():
-    hoje = datetime.today()
-    tres_meses_atras = hoje - timedelta(days=90)
+def get_three_months_period():
+    today = datetime.today()
+    three_months_ago = today - timedelta(days=90)
     
-    stime = int(tres_meses_atras.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
-    etime = int(hoje.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
+    stime = int(three_months_ago.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+    etime = int(today.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
     
-    logging.info(f"Período dos últimos 3 meses: {tres_meses_atras.date()} até {hoje.date()}")
+    logging.info(f"Período de três meses: {three_months_ago.date()} até {today.date()}")
     return stime, etime
 
-def baixar_grafico_zabbix_via_http(session, graphid, graph_name, host_name, stime, etime):
-    grafico_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={stime}&etime={etime}"
-    logging.info(f"URL gerado para o gráfico {graphid} do host {host_name}: {grafico_url}")
+def download_graph_zabbix_via_http(session, graphid, graph_name, host_name, stime, etime):
+    graph_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={stime}&etime={etime}"
+    logging.info(f"Generated URL for graph {graphid} of host {host_name}: {graph_url}")
+    
     try:
-        response = session.get(grafico_url, stream=True)
+        response = session.get(graph_url, stream=True)
         response.raise_for_status()
-        
-        if "memória" in graph_name.lower():
-            filename = f"grafico_memoria.png"
-        elif "CPU - utilização" in graph_name:
-            filename = f"grafico_cpu.png"
-        else:
-            filename = f"grafico_{graphid}.png"
 
-        grafico_path = os.path.join(output_dir, filename)
-        with open(grafico_path, 'wb') as f:
+        filename = (lambda graph_name: 
+                    "grafico_memoria.png" if "memória" in graph_name.lower() 
+                    else "grafico_cpu.png" if "CPU - utilização" in graph_name 
+                    else f"grafico_{graphid}.png")(graph_name)
+
+        graph_path = os.path.join(output_dir, filename)
+        with open(graph_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=1024):
                 f.write(chunk)
 
-        logging.info(f"Gráfico {graphid} do host {host_name} salvo em {grafico_path}")
-        return grafico_path
+        logging.info(f"Graph {graphid} of host {host_name} saved at {graph_path}")
+        return graph_path
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: {e}")
+        logging.error(f"Error downloading graph {graphid} for host {host_name}: {e}")
         return None
 
 app = Flask(__name__)
 
 @app.route('/baixar_graficos', methods=['GET'])
-def baixar_graficos():
+def download_graphs():
     try:
         if not host_id:
-            return jsonify({"erro": "HOST_ID não encontrado nas variáveis de ambiente."}), 400
+            return jsonify({"error": "HOST_ID not found in environment variables."}), 400
 
-        zapi = conectar_zabbix()
+        zapi = connect_zabbix()
         host = zapi.host.get(hostids=host_id, output=['hostid', 'name'])
         if not host:
-            return jsonify({"erro": f"Nenhum host encontrado com o ID {host_id}."}), 404
+            return jsonify({"error": f"No host found with ID {host_id}."}), 404
 
         host_name = host[0]['name']
-        logging.info(f"Host identificado: {host_name}")
+        logging.info(f"Host identified: {host_name}")
 
-        graficos = zapi.graph.get(output=['graphid', 'name'], hostids=host_id)
-        graficos_relevantes = [grafico for grafico in graficos if 'CPU - utilização' in grafico['name'] or 'memória' in grafico['name'].lower()]
+        graphs = zapi.graph.get(output=['graphid', 'name'], hostids=host_id)
 
-        if not graficos_relevantes:
-            return jsonify({"erro": "Nenhum gráfico relevante encontrado para o host especificado."}), 404
+        graphs_relevant = list(filter(
+            lambda graph: 'CPU - utilização' in graph['name'] or 'memória' in graph['name'].lower(),
+            graphs
+        ))
+
+        if not graphs_relevant:
+            return jsonify({"error": "No relevant graphs found for the specified host."}), 404
 
         session = requests.Session()
         session.post(f"{zabbix_url}/index.php", data={'name': zabbix_user, 'password': zabbix_password, 'enter': 'Sign in'})
+        session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-        stime, etime = obter_periodo_tres_meses()
+        stime, etime = get_three_months_period()
 
-        grafico_paths = []
+        graph_paths = []
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = [
-                executor.submit(baixar_grafico_zabbix_via_http, session, grafico['graphid'], grafico['name'], host_name, stime, etime)
-                for grafico in graficos_relevantes
+                executor.submit(download_graph_zabbix_via_http, session, graph['graphid'], graph['name'], host_name, stime, etime)
+                for graph in graphs_relevant
             ]
             for future in futures:
                 result = future.result()
                 if result:
-                    grafico_paths.append(result)
+                    graph_paths.append(result)
 
-        if not grafico_paths:
-            return jsonify({"erro": "Falha ao baixar os gráficos."}), 500
+        if not graph_paths:
+            return jsonify({"error": "Failed to download graphs."}), 500
 
-        return jsonify({"mensagem": "Gráficos baixados com sucesso.", "arquivos": grafico_paths}), 200
+        return jsonify({"message": "Graphs downloaded successfully.", "files": graph_paths}), 200
 
     except Exception as e:
-        logging.error(f"Erro ao processar os gráficos: {e}")
-        return jsonify({"erro": "Erro ao processar os gráficos."}), 500
+        logging.error(f"Error processing graphs: {e}")
+        return jsonify({"error": "Error processing graphs."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)  
+    app.run(debug=True, use_reloader=False)
