@@ -107,6 +107,14 @@ def executar_sql():
         logging.error(f"Erro ao executar SQL: {e}")
         return jsonify({"erro": "Erro ao executar SQL"}), 500
 
+def executar_sql_automaticamente():
+    """Executa o SQL automaticamente ao iniciar o servidor Flask."""
+    logging.info("Executando SQL automaticamente no início.")
+    try:
+        executar_sql_e_conectar_oracle(sql_file, output_file, jdbc_jar)
+    except Exception as e:
+        logging.error(f"Erro ao executar SQL automaticamente: {e}")
+
 if __name__ == '__main__':
-    logging.info("Iniciando servidor Flask...")
-    app.run(debug=True)
+    executar_sql_automaticamente()
+

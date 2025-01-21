@@ -3,18 +3,16 @@ import os
 from tkinter import messagebox
 import psycopg2
 import json
+import subprocess
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Carregar variáveis de ambiente
 host = os.getenv("HOST_DB")
 port = os.getenv("PORT_DB")
 dbname = os.getenv("NAME_DB")
 user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
 
-# Função para buscar todos os clientes do banco de dados
 def fetch_clients():
     try:
         connection = psycopg2.connect(
@@ -36,7 +34,6 @@ def fetch_clients():
             cursor.close()
             connection.close()
 
-# Função para gerar relatório com as informações do cliente
 def generate_report(client_id):
     try:
         connection = psycopg2.connect(
@@ -63,7 +60,16 @@ def generate_report(client_id):
             }
             with open('client_info.json', 'w') as json_file:
                 json.dump(client_info, json_file)
-            messagebox.showinfo("Sucesso", "Relatório gerado com sucesso!")
+
+            # Executando os scripts
+            execute_scripts()
+
+            # Verificando se o arquivo relatorio.pdf foi criado
+            if os.path.exists("output/reports/pdf/relatorio.pdf"):
+                messagebox.showinfo("Sucesso", "Relatório gerado com sucesso!")
+            else:
+                messagebox.showerror("Erro", "Falha ao gerar o relatório PDF.")
+
         else:
             messagebox.showerror("Erro", "Cliente não encontrado.")
     except Exception as e:
@@ -73,35 +79,40 @@ def generate_report(client_id):
             cursor.close()
             connection.close()
 
-# Função principal para criar a interface gráfica
+# Função para executar os scripts
+def execute_scripts():
+    try:
+        subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
+        subprocess.run(["python", "src/apps/app_jdbc.py"], check=True)
+        subprocess.run(["python", "src/apps/app_os.py"], check=True)
+        subprocess.run(["python", "src/generator/pdf.py"], check=True)
+
+        messagebox.showinfo("Sucesso", "Scripts executados com sucesso!")
+    except subprocess.CalledProcessError as e:
+        messagebox.showerror("Erro", f"Erro ao executar os scripts: {e}")
+
 def main():
-    # Criando a janela principal
     root = tk.Tk()
     root.title("Clientes")
     root.geometry("500x400")
 
-    # Criando um Listbox para mostrar os clientes
     clients = fetch_clients()
     listbox = tk.Listbox(root, height=10, width=50)
     for client in clients:
-        listbox.insert(tk.END, client[1])  # Exibindo o nome dos clientes
+        listbox.insert(tk.END, client[1])  
     listbox.pack()
 
-    # Função para lidar com a seleção de um cliente
     def on_select(event):
         selected_index = listbox.curselection()
         if selected_index:
             client_name = listbox.get(selected_index)
             cursor = fetch_clients()
-            # Encontrar o idcliente correspondente
             client_id = next((client[0] for client in cursor if client[1] == client_name), None)
             if client_id:
                 generate_report(client_id)
 
-    # Bind da seleção
     listbox.bind("<<ListboxSelect>>", on_select)
 
-    # Botão para gerar o relatório
     tk.Button(root, text="Gerar Relatório", command=lambda: on_select(None)).pack()
 
     root.mainloop()

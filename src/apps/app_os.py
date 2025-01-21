@@ -1,52 +1,37 @@
 import paramiko
 import shutil
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from flask import Flask, jsonify
 import os
 import json
 from dotenv import load_dotenv
 
+# Carregar variáveis de ambiente
+print("Carregando variáveis de ambiente...")
 load_dotenv()
-
-user = os.getenv("USER_OS")
-passw = os.getenv("PASS_OS")
 
 app = Flask(__name__)
 
-# Caminho do arquivo JSON contendo informações do cliente
-client_info_file = "client_info.json"
+print("Lendo informações do cliente a partir do JSON...")
+with open("../PGR/client_info.json", "r") as json_file:
+    client_info = json.load(json_file)
 
-# Caminho do arquivo de saída
+ip = client_info.get("ip")
+port = client_info.get("portassh")
+username = os.getenv("USER_OS")
+password = os.getenv("PASS_OS")
+
+print(f"Configurações de conexão carregadas: IP={ip}, Port={port}, User={username}")
+
 output_file = "result_os.txt"
 commands_file = "src/scripts/executable/commands.sh"
 
-def load_client_info():
-    """Carrega as informações do cliente a partir do arquivo JSON."""
-    try:
-        with open(client_info_file, "r") as file:
-            client_info = json.load(file)
-            ip = client_info.get("ip")
-            port = client_info.get("portassh")
-            username = user
-            password = passw
-
-            if not ip or not port or not username or not password:
-                raise ValueError("Informações de conexão incompletas no arquivo JSON.")
-
-            return ip, int(port), username, password
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Arquivo {client_info_file} não encontrado.")
-    except json.JSONDecodeError:
-        raise ValueError(f"Erro ao decodificar o arquivo {client_info_file}.")
-    except Exception as e:
-        raise Exception(f"Erro ao carregar informações do cliente: {e}")
-
 def read_commands_from_file(filename):
-    """Lê os comandos de um arquivo."""
+    print(f"Lendo comandos do arquivo: {filename}")
     try:
         with open(filename, "r") as file:
             commands = [line.strip() for line in file.readlines() if line.strip() and not line.startswith("#")]
+        print(f"Comandos carregados: {commands}")
         return commands
     except Exception as e:
         print(f"Erro ao ler o arquivo de comandos: {e}")
@@ -55,38 +40,42 @@ def read_commands_from_file(filename):
 commands = read_commands_from_file(commands_file)
 
 def run_remote_command(ssh_client, command):
-    """Executa um comando remoto via SSH."""
+    print(f"Executando comando remotamente: {command}")
     stdin, stdout, stderr = ssh_client.exec_command(command)
     output = stdout.read().decode().strip()
     error = stderr.read().decode().strip()
+    if output:
+        print(f"Saída do comando: {output}")
+    if error:
+        print(f"Erro do comando: {error}")
     return output if output else error
 
 def process_command(ssh_client, command):
-    """Processa um comando remoto e retorna o resultado."""
+    print(f"Processando comando: {command}")
     command = command.strip()
     if command and not command.startswith("#"):
-        print(f"Executando comando: {command}")
         result = run_remote_command(ssh_client, command)
-        return f"{result}\n\n"
+        print(f"Resultado do comando processado: {result}")
+        return f"{result}\n\n"  
     return ""
 
 def generate_file():
-    """Conecta ao servidor SSH e executa os comandos."""
+    print("Iniciando a geração do arquivo...")
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  #
+
     try:
-        ip, port, username, password = load_client_info()
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        print(f"Conectando ao servidor SSH {ip}:{port} com o usuário {username}...")
         ssh_client.connect(hostname=ip, port=port, username=username, password=password)
-        print(f"Conectado com sucesso a {ip}:{port}")
+        print("Conexão SSH bem-sucedida.")
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            with open(output_file, "w") as output:
-                futures = [executor.submit(process_command, ssh_client, command) for command in commands]
+        print("Executando comandos sequencialmente...")
+        with open(output_file, "w") as output:
+            for command in commands:
+                result = process_command(ssh_client, command)
+                output.write(result)
 
-                for future in futures:
-                    output.write(future.result())
-
-        print(f"Resultados salvos em {output_file}")
+        print(f"Resultados salvos no arquivo: {output_file}")
         return True
     except paramiko.AuthenticationException:
         print("Erro de autenticação. Verifique o usuário e a senha.")
@@ -95,28 +84,42 @@ def generate_file():
         print(f"Erro ao conectar ou executar comandos: {e}")
         return False
     finally:
-        if 'ssh_client' in locals() and ssh_client:
-            ssh_client.close()
-            print("Conexão SSH encerrada.")
+        print("Encerrando a conexão SSH...")
+        ssh_client.close()
+        print("Conexão SSH encerrada.")
+
 
 output_directory = "./output"
 
 @app.route('/executar_comandos', methods=["GET"])
 def executar_comandos():
-    """Rota para executar os comandos remotos."""
+    print("Recebida solicitação para executar comandos.")
     if generate_file():
+        print("Arquivo gerado com sucesso. Preparando para mover para o diretório de saída...")
         txt_results_directory = os.path.join(output_directory, "reports")
         os.makedirs(txt_results_directory, exist_ok=True)
     
         target_path = os.path.join(txt_results_directory, output_file)
         shutil.move(output_file, target_path)
+        print(f"Arquivo movido para: {target_path}")
 
         return jsonify({
             "mensagem": "Arquivo gerado com sucesso.",
             "caminho_arquivo": target_path
         }), 200
     
+    print("Falha ao gerar o arquivo.")
     return jsonify({"erro": "Falha ao gerar o arquivo."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+        print("Executando comandos automaticamente...")
+        if generate_file():
+            print("Arquivo gerado com sucesso.")
+            txt_results_directory = os.path.join(output_directory, "reports")
+            os.makedirs(txt_results_directory, exist_ok=True)
+
+            target_path = os.path.join(txt_results_directory, output_file)
+            shutil.move(output_file, target_path)
+            print(f"Arquivo movido para: {target_path}")
+        else:
+            print("Falha ao gerar o arquivo.")
