@@ -15,7 +15,7 @@ os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, "zabbix.log")
 logging.basicConfig(
     filename=log_file,
-    level=logging.INFO,
+    level=logging.DEBUG,  # Aumentei o nível de log para DEBUG para mais informações
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -36,20 +36,31 @@ def connect_zabbix():
 def get_three_months_period():
     today = datetime.today()
     three_months_ago = today - timedelta(days=90)
-    
+
+    # Gerando os timestamps para o período de 90 dias
     stime = int(three_months_ago.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
     etime = int(today.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
-    
-    logging.info(f"Período de três meses: {three_months_ago.date()} até {today.date()}")
+
+    # Debugging dos valores de stime e etime
+    logging.debug(f"Debug - stime: {stime} ({three_months_ago})")
+    logging.debug(f"Debug - etime: {etime} ({today})")
+
     return stime, etime
 
-def download_graph_zabbix_via_http(session, graphid, graph_name, host_name, stime, etime):
-    graph_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={stime}&etime={etime}"
-    logging.info(f"Generated URL for graph {graphid} of host {host_name}: {graph_url}")
-    
+def download_graph_zabbix_via_http(graphid, graph_name, host_name, stime, etime):
+    # Gerando a URL do gráfico com os parâmetros stime e etime através da API Zabbix
     try:
-        response = session.get(graph_url, stream=True)
+        graph_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={stime}&etime={etime}"
+        logging.debug(f"Generated URL for graph {graphid} of host {host_name}: {graph_url}")
+
+        response = requests.get(graph_url, stream=True)
         response.raise_for_status()
+
+        # Verificando o tipo de conteúdo da resposta
+        content_type = response.headers.get('Content-Type')
+        if 'image/png' not in content_type:
+            logging.error(f"Expected image/png but got {content_type}. URL: {graph_url}")
+            return None
 
         filename = (lambda graph_name: 
                     "grafico_memoria.png" if "memória" in graph_name.lower() 
@@ -67,6 +78,7 @@ def download_graph_zabbix_via_http(session, graphid, graph_name, host_name, stim
     except requests.exceptions.RequestException as e:
         logging.error(f"Error downloading graph {graphid} for host {host_name}: {e}")
         return None
+
 
 app = Flask(__name__)
 
@@ -94,16 +106,12 @@ def download_graphs():
         if not graphs_relevant:
             return jsonify({"error": "No relevant graphs found for the specified host."}), 404
 
-        session = requests.Session()
-        session.post(f"{zabbix_url}/index.php", data={'name': zabbix_user, 'password': zabbix_password, 'enter': 'Sign in'})
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
-
         stime, etime = get_three_months_period()
 
         graph_paths = []
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = [
-                executor.submit(download_graph_zabbix_via_http, session, graph['graphid'], graph['name'], host_name, stime, etime)
+                executor.submit(download_graph_zabbix_via_http, graph['graphid'], graph['name'], host_name, stime, etime)
                 for graph in graphs_relevant
             ]
             for future in futures:
