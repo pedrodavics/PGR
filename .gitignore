@@ -19,4 +19,6 @@ static/csv/
 
 static/libs/
 
+*.json
+
 

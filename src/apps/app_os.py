@@ -2,23 +2,48 @@ import paramiko
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from flask import Flask, send_file, jsonify, request
+from flask import Flask, jsonify
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
+user = os.getenv("USER_OS")
+passw = os.getenv("PASS_OS")
+
 app = Flask(__name__)
 
-host = os.getenv("HOST_OS")
-port = os.getenv("PORT_OS")
-username = os.getenv("USER_OS")
-password = os.getenv("PASS_OS")
+# Caminho do arquivo JSON contendo informações do cliente
+client_info_file = "client_info.json"
 
+# Caminho do arquivo de saída
 output_file = "result_os.txt"
-commands_file = "src/scripts/executable/commands.sh"  
+commands_file = "src/scripts/executable/commands.sh"
+
+def load_client_info():
+    """Carrega as informações do cliente a partir do arquivo JSON."""
+    try:
+        with open(client_info_file, "r") as file:
+            client_info = json.load(file)
+            ip = client_info.get("ip")
+            port = client_info.get("portassh")
+            username = user
+            password = passw
+
+            if not ip or not port or not username or not password:
+                raise ValueError("Informações de conexão incompletas no arquivo JSON.")
+
+            return ip, int(port), username, password
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Arquivo {client_info_file} não encontrado.")
+    except json.JSONDecodeError:
+        raise ValueError(f"Erro ao decodificar o arquivo {client_info_file}.")
+    except Exception as e:
+        raise Exception(f"Erro ao carregar informações do cliente: {e}")
 
 def read_commands_from_file(filename):
+    """Lê os comandos de um arquivo."""
     try:
         with open(filename, "r") as file:
             commands = [line.strip() for line in file.readlines() if line.strip() and not line.startswith("#")]
@@ -30,26 +55,29 @@ def read_commands_from_file(filename):
 commands = read_commands_from_file(commands_file)
 
 def run_remote_command(ssh_client, command):
+    """Executa um comando remoto via SSH."""
     stdin, stdout, stderr = ssh_client.exec_command(command)
     output = stdout.read().decode().strip()
     error = stderr.read().decode().strip()
     return output if output else error
 
 def process_command(ssh_client, command):
+    """Processa um comando remoto e retorna o resultado."""
     command = command.strip()
     if command and not command.startswith("#"):
         print(f"Executando comando: {command}")
         result = run_remote_command(ssh_client, command)
-        return f"{result}\n\n"  
+        return f"{result}\n\n"
     return ""
 
 def generate_file():
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
+    """Conecta ao servidor SSH e executa os comandos."""
     try:
-        ssh_client.connect(hostname=host, port=port, username=username, password=password)
-        print(f"Conectado com sucesso a {host}:{port}")
+        ip, port, username, password = load_client_info()
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname=ip, port=port, username=username, password=password)
+        print(f"Conectado com sucesso a {ip}:{port}")
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             with open(output_file, "w") as output:
@@ -67,13 +95,15 @@ def generate_file():
         print(f"Erro ao conectar ou executar comandos: {e}")
         return False
     finally:
-        ssh_client.close()
-        print("Conexão SSH encerrada.")
+        if 'ssh_client' in locals() and ssh_client:
+            ssh_client.close()
+            print("Conexão SSH encerrada.")
 
 output_directory = "./output"
 
 @app.route('/executar_comandos', methods=["GET"])
 def executar_comandos():
+    """Rota para executar os comandos remotos."""
     if generate_file():
         txt_results_directory = os.path.join(output_directory, "reports")
         os.makedirs(txt_results_directory, exist_ok=True)
