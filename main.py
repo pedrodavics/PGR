@@ -131,18 +131,71 @@ def generate_report(client_id):
     else:
         messagebox.showerror("Erro", "Cliente não encontrado.")
 
+# Função para atualizar a listbox com clientes filtrados
+def update_listbox(filtered_clients):
+    listbox.delete(0, tk.END)
+    for client in filtered_clients:
+        listbox.insert(tk.END, client[1])
+
+# Função para pesquisar clientes conforme a digitação
+def filter_clients(event):
+    query = search_var.get().lower()
+    filtered_clients = [client for client in clients if query in client[1].lower()]
+    update_listbox(filtered_clients)
+
+# Função para alterar o fundo ao passar o mouse sobre um item da listbox
+def on_hover(event, listbox):
+    index = listbox.nearest(event.y)
+    listbox.itemconfig(index, {'bg': 'black', 'fg': 'white'})
+
+# Função para reverter a cor ao sair do item da listbox
+def on_leave(event, listbox):
+    index = listbox.nearest(event.y)
+    listbox.itemconfig(index, {'bg': 'white', 'fg': 'black'})
+
 # Função principal para a interface gráfica
 def main():
+    global clients, listbox, search_var
+
     root = tk.Tk()
     root.title("Clientes")
-    root.geometry("500x400")
+    root.geometry("600x500")
+    root.config(bg="#f0f0f0")
 
+    # Variável para busca
+    search_var = tk.StringVar()
+
+    # Criando a barra de pesquisa
+    search_label = tk.Label(root, text="Pesquisar Cliente:", font=("Arial", 14), bg="#f0f0f0")
+    search_label.pack(pady=10)
+
+    search_bar = tk.Entry(root, textvariable=search_var, font=("Arial", 12), width=40)
+    search_bar.pack(pady=5)
+    search_bar.bind("<KeyRelease>", filter_clients)
+
+    # Buscando os clientes
     clients = fetch_clients()
-    listbox = tk.Listbox(root, height=10, width=50)
-    for client in clients:
-        listbox.insert(tk.END, client[1])  
-    listbox.pack()
 
+    # Criando a listbox
+    listbox_frame = tk.Frame(root, bg="#f0f0f0")
+    listbox_frame.pack(pady=20)
+
+    listbox = tk.Listbox(listbox_frame, height=10, width=50, font=("Arial", 12), bd=0, selectmode=tk.SINGLE)
+    listbox.pack(side=tk.LEFT, fill=tk.BOTH)
+
+    scrollbar = tk.Scrollbar(listbox_frame, orient=tk.VERTICAL, command=listbox.yview)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    listbox.config(yscrollcommand=scrollbar.set)
+
+    # Adicionando os clientes à listbox
+    for client in clients:
+        listbox.insert(tk.END, client[1])
+
+    # Configurando os eventos de hover
+    listbox.bind("<Motion>", lambda event: on_hover(event, listbox))
+    listbox.bind("<Leave>", lambda event: on_leave(event, listbox))
+
+    # Evento de seleção na listbox
     def on_select(event):
         selected_index = listbox.curselection()
         if selected_index:
@@ -152,7 +205,6 @@ def main():
                 generate_report(client_id)
 
     listbox.bind("<<ListboxSelect>>", on_select)
-    tk.Button(root, text="Gerar Relatório", command=lambda: on_select(None)).pack()
 
     root.mainloop()
 
