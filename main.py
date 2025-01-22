@@ -1,20 +1,27 @@
+from tkinterweb import HtmlFrame
 import tkinter as tk
 import os
-from tkinter import messagebox
 import psycopg2
 import json
 import subprocess
 from dotenv import load_dotenv
 import shutil
+from tkinter import messagebox
+from tkinter import ttk
+import socket
+from datetime import datetime
 
 load_dotenv()
+
 host = os.getenv("HOST_DB")
 port = os.getenv("PORT_DB")
 dbname = os.getenv("NAME_DB")
 user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
 
-# Função para conectar ao banco de dados
+master = os.getenv("USER_MAIN")
+key = os.getenv("PASS_MAIN")
+
 def connect_db():
     try:
         connection = psycopg2.connect(
@@ -29,7 +36,6 @@ def connect_db():
         messagebox.showerror("Erro", f"Erro ao conectar ao banco de dados: {e}")
         return None
 
-# Função para buscar os clientes no banco de dados
 def fetch_clients():
     connection = connect_db()
     if connection:
@@ -45,7 +51,6 @@ def fetch_clients():
             connection.close()
     return []
 
-# Função para buscar os dados de um cliente
 def fetch_client_data(client_id):
     connection = connect_db()
     if connection:
@@ -61,7 +66,33 @@ def fetch_client_data(client_id):
             connection.close()
     return None
 
-# Função para salvar as informações do cliente
+def save_user_data(username, client_name):
+    user_data = {
+        "user": username,
+        "ip": get_ip_address(),
+        "time": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "selected_client": client_name
+    }
+
+    try:
+        if os.path.exists('user_data.json'):
+            with open('user_data.json', 'r') as json_file:
+                existing_data = json.load(json_file)
+        else:
+            existing_data = []
+
+        existing_data.append(user_data)
+
+        with open('user_data.json', 'w') as json_file:
+            json.dump(existing_data, json_file, indent=4)
+        print("Dados do usuário salvos com sucesso!")
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao salvar os dados do usuário: {e}")
+
+
+def get_ip_address():
+    return socket.gethostbyname(socket.gethostname())
+
 def save_client_info(client_data):
     client_info = {
         "idcliente": client_data[0],
@@ -76,10 +107,8 @@ def save_client_info(client_data):
     with open('client_info.json', 'w') as json_file:
         json.dump(client_info, json_file)
 
-# Função para limpar arquivos temporários
 def clean():
     try:
-        # Apagando arquivos e pastas temporárias
         os.remove('client_info.json')
         print("Arquivo client_info.json apagado com sucesso!")
         
@@ -97,7 +126,6 @@ def clean():
             shutil.rmtree("output/reports")
             print("Pasta 'reports' apagada com sucesso!")
 
-        # Apagando os logs
         if os.path.exists("logs/zabbix.log"):
             os.remove("logs/zabbix.log")
             print("Arquivo 'zabbix.log' apagado com sucesso!")
@@ -109,7 +137,6 @@ def clean():
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao limpar arquivos temporários: {e}")
 
-# Função para executar os scripts
 def execute_scripts():
     try:
         subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
@@ -120,41 +147,55 @@ def execute_scripts():
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Erro", f"Erro ao executar os scripts: {e}")
 
-# Função para gerar o relatório
-def generate_report(client_id):
+def generate_report(client_id, username):
     client_data = fetch_client_data(client_id)
     if client_data:
         save_client_info(client_data)
+        save_user_data(username, client_data[1]) 
         execute_scripts()
         clean()
         messagebox.showinfo("Sucesso", "Relatório gerado com sucesso!")
     else:
         messagebox.showerror("Erro", "Cliente não encontrado.")
 
-# Função para atualizar a listbox com clientes filtrados
+# Filter and update the client listbox
 def update_listbox(filtered_clients):
     listbox.delete(0, tk.END)
     for client in filtered_clients:
         listbox.insert(tk.END, client[1])
 
-# Função para pesquisar clientes conforme a digitação
+# Filter clients based on the search query
 def filter_clients(event):
     query = search_var.get().lower()
     filtered_clients = [client for client in clients if query in client[1].lower()]
     update_listbox(filtered_clients)
 
-# Função para alterar o fundo ao passar o mouse sobre um item da listbox
+# Autocomplete function to complete the query on 'Tab'
+def autocomplete(event):
+    query = search_var.get().lower()
+    matching_clients = [client[1] for client in clients if query in client[1].lower()]
+    if matching_clients:
+        search_var.set(matching_clients[0])
+
 def on_hover(event, listbox):
     index = listbox.nearest(event.y)
     listbox.itemconfig(index, {'bg': 'black', 'fg': 'white'})
 
-# Função para reverter a cor ao sair do item da listbox
 def on_leave(event, listbox):
     index = listbox.nearest(event.y)
     listbox.itemconfig(index, {'bg': 'white', 'fg': 'black'})
 
-# Função principal para a interface gráfica
-def main():
+def login():
+    username = username_var.get()
+    password = password_var.get()
+    
+    if username == master and password == key:
+        login_frame.pack_forget()
+        run_main_app(username)  
+    else:
+        messagebox.showerror("Erro", "Usuário ou senha incorretos!")
+
+def run_main_app(username):
     global clients, listbox, search_var
 
     root = tk.Tk()
@@ -162,21 +203,18 @@ def main():
     root.geometry("600x500")
     root.config(bg="#f0f0f0")
 
-    # Variável para busca
     search_var = tk.StringVar()
 
-    # Criando a barra de pesquisa
     search_label = tk.Label(root, text="Pesquisar Cliente:", font=("Arial", 14), bg="#f0f0f0")
     search_label.pack(pady=10)
 
     search_bar = tk.Entry(root, textvariable=search_var, font=("Arial", 12), width=40)
     search_bar.pack(pady=5)
     search_bar.bind("<KeyRelease>", filter_clients)
+    search_bar.bind("<Tab>", autocomplete)  # Bind 'Tab' key to autocomplete function
 
-    # Buscando os clientes
     clients = fetch_clients()
 
-    # Criando a listbox
     listbox_frame = tk.Frame(root, bg="#f0f0f0")
     listbox_frame.pack(pady=20)
 
@@ -187,26 +225,59 @@ def main():
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
     listbox.config(yscrollcommand=scrollbar.set)
 
-    # Adicionando os clientes à listbox
     for client in clients:
         listbox.insert(tk.END, client[1])
 
-    # Configurando os eventos de hover
     listbox.bind("<Motion>", lambda event: on_hover(event, listbox))
     listbox.bind("<Leave>", lambda event: on_leave(event, listbox))
 
-    # Evento de seleção na listbox
     def on_select(event):
         selected_index = listbox.curselection()
         if selected_index:
             client_name = listbox.get(selected_index)
             client_id = next((client[0] for client in clients if client[1] == client_name), None)
             if client_id:
-                generate_report(client_id)
+                generate_report(client_id, username)
 
     listbox.bind("<<ListboxSelect>>", on_select)
 
     root.mainloop()
 
-if __name__ == "__main__":
-    main()
+root = tk.Tk()
+root.title("Login")
+root.geometry("400x250")
+root.config(bg="#f0f0f0")
+
+login_frame = tk.Frame(root, bg="#f0f0f0")
+login_frame.pack(pady=50)
+
+username_var = tk.StringVar()
+password_var = tk.StringVar()
+
+username_label = tk.Label(login_frame, text="Usuário:", font=("Arial", 12), bg="#f0f0f0")
+username_label.grid(row=0, column=0, padx=10, pady=10)
+
+username_entry = tk.Entry(login_frame, textvariable=username_var, font=("Arial", 12))
+username_entry.grid(row=0, column=1, padx=10, pady=10)
+
+password_label = tk.Label(login_frame, text="Senha:", font=("Arial", 12), bg="#f0f0f0")
+password_label.grid(row=1, column=0, padx=10, pady=10)
+
+password_entry = tk.Entry(login_frame, textvariable=password_var, font=("Arial", 12), show="*")
+password_entry.grid(row=1, column=1, padx=10, pady=10)
+
+def toggle_password():
+    if password_entry.cget('show') == "*":
+        password_entry.config(show="")
+        toggle_password_button.config(text="Ocultar")
+    else:
+        password_entry.config(show="*")
+        toggle_password_button.config(text="Mostrar")
+
+toggle_password_button = tk.Button(login_frame, text="Mostrar", font=("Arial", 12), command=toggle_password, relief=tk.FLAT, bg="#f0f0f0")
+toggle_password_button.grid(row=1, column=2, padx=10, pady=10)
+
+login_button = tk.Button(login_frame, text="Entrar", font=("Arial", 12), command=login)
+login_button.grid(row=2, column=0, columnspan=2, pady=20)
+
+root.mainloop()
