@@ -10,9 +10,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
-zabbix_url = os.getenv("URL_ZABBIX")
-zabbix_user = os.getenv("USER_ZABBIX")
-zabbix_password = os.getenv("PASS_ZABBIX")
+zabbix_url = os.getenv("URL_ZBX")
+zabbix_user = os.getenv("USER_ZBX")
+zabbix_password = os.getenv("PASS_ZBX")
 
 log_dir = os.path.join(os.getcwd(), "logs")
 os.makedirs(log_dir, exist_ok=True)
