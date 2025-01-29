@@ -8,3 +8,6 @@ reportlab
 psycopg2-binary
 python-dotenv
 tkinterweb
+plotly
+kaleido
+scipy
