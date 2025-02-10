@@ -54,8 +54,7 @@ def obter_itens_do_host(zapi, hostid):
         if not items:
             logging.warning(f"Nenhum item encontrado para o host {hostid}.")
             return {}
-
-        # Filtrando apenas os itens que contêm "CPU" ou "Memória" no nome
+        
         items_per_host = {item['name']: item['itemid'] for item in items if "CPU" in item['name'] or "memória" in item['name']}
         logging.info(f"Itens encontrados para o host {hostid}: {list(items_per_host.keys())}")
         return items_per_host

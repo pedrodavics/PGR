@@ -51,3 +51,4 @@ Após a coleta de dados, o sistema reorganiza as informações em um arquivo **P
 ## 📧 Contato
 Para mais informações, entre em contato com o time responsável pelo desenvolvimento da PGR.
 - davi.capistrano@tauge.com.br
+- arthur.veras@tauge.com.br

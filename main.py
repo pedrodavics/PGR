@@ -11,7 +11,6 @@ from tkinter import ttk
 import socket
 from datetime import datetime
 
-# Carregar variáveis de ambiente
 load_dotenv()
 
 host = os.getenv("HOST_DB")
@@ -23,7 +22,6 @@ password = os.getenv("PASS_DB")
 master = os.getenv("USER_MAIN")
 key = os.getenv("PASS_MAIN")
 
-# Conectar ao banco de dados
 def connect_db():
     try:
         connection = psycopg2.connect(
@@ -37,8 +35,7 @@ def connect_db():
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao conectar ao banco de dados: {e}")
         return None
-
-# Buscar clientes no banco de dados
+    
 def fetch_clients():
     connection = connect_db()
     if connection:
@@ -54,7 +51,6 @@ def fetch_clients():
             connection.close()
     return []
 
-# Buscar dados de um cliente específico
 def fetch_client_data(client_id):
     connection = connect_db()
     if connection:
@@ -70,7 +66,6 @@ def fetch_client_data(client_id):
             connection.close()
     return None
 
-# Salvar dados do usuário no banco de dados
 def save_user_data(username, client_name):
     user_ip = get_ip_address()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -91,11 +86,9 @@ def save_user_data(username, client_name):
             cursor.close()
             connection.close()
 
-# Obter o endereço IP do usuário
 def get_ip_address():
     return socket.gethostbyname(socket.gethostname())
 
-# Salvar informações do cliente em um arquivo JSON
 def save_client_info(client_data):
     client_info = {
         "idcliente": client_data[0],
@@ -110,7 +103,6 @@ def save_client_info(client_data):
     with open('client_info.json', 'w') as json_file:
         json.dump(client_info, json_file)
 
-# Limpar arquivos temporários
 def clean():
     try:
         os.remove('client_info.json')
@@ -141,7 +133,6 @@ def clean():
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao limpar arquivos temporários: {e}")
 
-# Executar scripts
 def execute_scripts():
     try:
         subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
@@ -152,7 +143,6 @@ def execute_scripts():
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Erro", f"Erro ao executar os scripts: {e}")
 
-# Gerar relatório para um cliente
 def generate_report(client_id, username):
     client_data = fetch_client_data(client_id)
     if client_data:
@@ -164,14 +154,12 @@ def generate_report(client_id, username):
     else:
         messagebox.showerror("Erro", "Cliente não encontrado.")
 
-# Tela de autenticação
 def authenticate_user(username, password):
     if username == master and password == key:
         return True
     else:
         return False
-
-# Mostrar tela de seleção de clientes
+    
 def show_client_selection(root):
     root.destroy()
     client_root = tk.Tk()
@@ -203,7 +191,6 @@ def show_client_selection(root):
     tk.Button(client_root, text="Gerar Relatório", command=on_generate).pack(pady=20)
     client_root.mainloop()
 
-# Função principal
 def main():
     auth_root = tk.Tk()
     auth_root.title("Autenticação")

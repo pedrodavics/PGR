@@ -49,7 +49,7 @@ def adicionar_texto_ao_pdf(c, texto, x_start, y_start):
 
 def adicionar_imagem_ao_pdf(c, img_path, x_start, y_start, img_width=200, img_height=250, log_path=None):
     try:
-        if y_start - img_height - 20 < 50:  # Checar se a imagem cabe na página
+        if y_start - img_height - 20 < 50: 
             mensagem = f"Espaço insuficiente para a imagem {img_path}. Ajuste o layout."
             if log_path:
                 salvar_log(log_path, mensagem)
@@ -89,6 +89,10 @@ def adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt, output_dir, log_pa
                     if arquivo_txt and os.path.exists(arquivo_txt):
                         with open(arquivo_txt, "r", encoding="utf-8") as file:
                             conteudo = file.readlines()
+                        
+                        if sessao_nome == "Versão do banco de dados" and conteudo:
+                            conteudo = [conteudo[0]]
+
                         y_position = adicionar_texto_ao_pdf(c, conteudo, x_start=72, y_start=y_position)
                         salvar_log(log_path, f"Texto da sessão '{sessao_nome}' adicionado com sucesso.")
 
@@ -128,20 +132,22 @@ def adicionar_informacoes(caminho_pdf, sessoes, arquivos_txt, output_dir, log_pa
             writer.write(output_file)
 
         salvar_log(log_path, f"PDF atualizado gerado com sucesso: {pdf_final_path}")
+
         return pdf_final_path
     except Exception as e:
         salvar_log(log_path, f"Erro ao adicionar informações: {e}")
         return None
 
 def manipular_pdf():
-    caminho_pdf = "./static/assets/Template relatorio tauge.pdf"
+    caminho_pdf = "static/assets/Template.pdf"
     log_dir = criar_log_dir()
     log_path = os.path.join(log_dir, "pdf.log")
 
-    sessoes_mapear = ["INFORMAÇÕES DE SERVIDOR", "9.1 Memória", "9.2 CPU"]
+    sessoes_mapear = ["Informações do Servidor Produtivo", "Versão do banco de dados"]
 
     arquivos_txt = {
-        "INFORMAÇÕES DE SERVIDOR": "./output/reports/result_os.txt",
+        "Informações do Servidor Produtivo": "./output/reports/result_os.txt",
+        "Versão do banco de dados": "./output/reports/result_jdbc.txt",
     }
 
     output_dir = criar_subpasta_pdf()

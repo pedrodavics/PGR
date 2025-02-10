@@ -6,7 +6,6 @@ import os
 import json
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente
 print("Carregando variáveis de ambiente...")
 load_dotenv()
 
@@ -18,6 +17,7 @@ with open("../PGR/client_info.json", "r") as json_file:
 
 ip = client_info.get("ip")
 port = client_info.get("portassh")
+
 username = os.getenv("USER_OS")
 password = os.getenv("PASS_OS")
 
