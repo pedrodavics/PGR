@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório</title>
+<style>* {margin:0; padding:0; text-indent:0; }
+    .s1 { color: black; font-family:"Times New Roman", serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 10pt; }
+    .s3 { color: #033D79; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 17.5pt; }
+    .s9 { color: #3B3B3B; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 46pt; }
+    .s10 { color: #26A374; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 52.5pt; }
+    .s11 { color: #3B3B3B; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 7.5pt; }
+    .s13 { color: #3B3B3B; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    .s14 { color: #3B3B3B; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12.5pt; }
+    .s15 { color: #3B3B3B; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 13pt; }
+    h1 { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    .a, a { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    .s16 { color: #434343; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    .p, p { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; margin:0pt; }
+    .s17 { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    .s18 { color: #FFF; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    .s19 { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    .s20 { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    .s21 { color: #1F3863; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    .s22 { color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: underline; font-size: 12pt; }
+    li {display: block; }
+    #l1 {padding-left: 0pt;counter-reset: c1 1; }
+    #l1> li>*:first-child:before {counter-increment: c1; content: counter(c1, decimal)". "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    #l1> li:first-child>*:first-child:before {counter-increment: c1 0;  }
+    li {display: block; }
+    #l2 {padding-left: 0pt; }
+    #l2> li>*:first-child:before {content: "• "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    li {display: block; }
+    #l3 {padding-left: 0pt;counter-reset: e1 1; }
+    #l3> li>*:first-child:before {counter-increment: e1; content: counter(e1, decimal)". "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    #l3> li:first-child>*:first-child:before {counter-increment: e1 0;  }
+    #l4 {padding-left: 0pt; }
+    #l4> li>*:first-child:before {content: "● "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    #l5 {padding-left: 0pt;counter-reset: e2 1; }
+    #l5> li>*:first-child:before {counter-increment: e2; content: counter(e1, decimal)"."counter(e2, decimal)". "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    #l5> li:first-child>*:first-child:before {counter-increment: e2 0;  }
+    li {display: block; }
+    #l6 {padding-left: 0pt;counter-reset: e1 1; }
+    #l6> li>*:first-child:before {counter-increment: e1; content: counter(e1, decimal)". "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: bold; text-decoration: none; font-size: 12pt; }
+    #l6> li:first-child>*:first-child:before {counter-increment: e1 0;  }
+    #l7 {padding-left: 0pt;counter-reset: e2 2; }
+    #l7> li>*:first-child:before {counter-increment: e2; content: counter(e1, decimal)"."counter(e2, decimal)". "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    #l7> li:first-child>*:first-child:before {counter-increment: e2 0;  }
+    #l8 {padding-left: 0pt;counter-reset: e2 1; }
+    #l8> li>*:first-child:before {counter-increment: e2; content: counter(e1, decimal)"."counter(e2, decimal)". "; color: black; font-family:Arial, sans-serif; font-style: normal; font-weight: normal; text-decoration: none; font-size: 12pt; }
+    #l8> li:first-child>*:first-child:before {counter-increment: e2 0;  }
+    table, tbody {vertical-align: top; overflow: visible; }</style>
+   <p style="padding-top: 2pt; padding-left: 54pt; text-indent: 0pt; text-align: left;">&nbsp;</p>
+   <ol>
+     <li style="list-style-type: none;">
+       <ol>
+         <li data-list-text="1.">
+           <h1 style="padding-top: 3pt; padding-left: 43pt; text-indent: -27pt; text-align: left;">
+             <a name="bookmark1"></a>1. ‌Apresentação do Administrador de Banco de Dados (DBA)&nbsp; 
+           </h1>
+           <p style="text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="height: 102px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 34px;">
+                 <td style="width: 127.219px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">NOME</p>
+                 </td>
+                 <td style="width: 450.219px; height: 34px;" bgcolor="#F1F1F1">
+                   <p style="text-indent: 0pt; text-align: left;">
+                     <br>
+                   </p>
+                 </td>
+               </tr>
+               <tr style="height: 34px;">
+                 <td style="width: 127.219px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">TELEFONE</p>
+                 </td>
+                 <td style="width: 450.219px; height: 34px;" bgcolor="#F1F1F1">
+                   <p style="text-indent: 0pt; text-align: left;">
+                     <br>
+                   </p>
+                 </td>
+               </tr>
+               <tr style="height: 34px;">
+                 <td style="width: 127.219px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">E-MAIL</p>
+                 </td>
+                 <td style="width: 450.219px; height: 34px;" bgcolor="#F1F1F1">
+                   <p style="text-indent: 0pt; text-align: left;">
+                     <br>
+                   </p>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+           <p style="padding-top: 10pt; text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <ol>
+             <li data-list-text="2.">
+               <h1 style="padding-left: 79pt; text-indent: -27pt; text-align: left;">
+                 <a name="bookmark2"></a>2. ‌Informações do Servidor Produtivo 
+                 <br style="background: #ffffff;">
+                 <br style="background: #ffffff;">
+               </h1>
+               <table style="height: 695px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 578px;" border="2" cellspacing="0">
+                 <tbody>
+                   <tr style="height: 34px;">
+                     <td style="width: 574.992px; height: 34px;" bgcolor="#F1F1F1">
+                       <p style="text-indent: 0pt; text-align: left;">{{informacoes_servidor}}</p>
+                     </td>
+                   </tr>
+                 </tbody>
+               </table>
+             </li>
+           </ol>
+         </li>
+       </ol>
+     </li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;
+       <ol>
+         <li data-list-text="3.">
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">
+             <a name="bookmark3"></a>3. ‌Gestão de volumetria 
+           </h1>
+           <p style="text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="height: 136px; border-collapse: collapse; margin-left: 80.02pt; border-color: #ffffff; background: #ffffff; width: 572px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 26pt;">
+                 <td style="width: 460px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">TOTAL DE INSTÂNCIAS (Servidor)</p>
+                 </td>
+                 <td style="width: 112px; height: 34px;" bgcolor="#F1F1F1">{{instancias}}</td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 460px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">TOTAL DE DATABASES PRODUTIVAS</p>
+                 </td>
+                 <td style="width: 112px; height: 34px;" bgcolor="#F1F1F1">{{produtivas}}</td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 460px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">TOTAL DE INSTÂNCIAS COM SUPORTE</p>
+                 </td>
+                 <td style="width: 112px; height: 34px;" bgcolor="#F1F1F1">{{com_suporte}}</td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 460px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">TOTAL DE INSTÂNCIAS SEM SUPORTE</p>
+                 </td>
+                 <td style="width: 112px; height: 34px;" bgcolor="#F1F1F1">{{sem_suporte}}</td>
+               </tr>
+             </tbody>
+           </table>
+           <br style="background: #ffffff;">
+         </li>
+         <li data-list-text="4.">
+           <h1 style="padding-left: 79pt; text-indent: -27pt; text-align: left;">
+             <a name="bookmark4"></a>4. ‌Gestão de Produtividade
+           </h1>
+           <p style="padding-top: 6pt; padding-left: 41pt; text-indent: 36pt; line-height: 114%; text-align: left;">As ações aqui apresentadas representam as tratativas em andamento entre NOME DA EMPRESA e Tauge. 
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+             <br style="background: #ffffff;">
+           </p>
+         </li>
+         <li data-list-text="5.">&nbsp;</li>
+         <li data-list-text="5.">&nbsp;</li>
+         <li data-list-text="5.">
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">&nbsp;‌&nbsp; 5.&nbsp; &nbsp; &nbsp;Gestão de Crises 
+           </h1>
+           <p style="padding-top: 6pt; padding-left: 41pt; text-indent: 0pt; line-height: 113%; text-align: left;">Crises representam impacto alto ao ambiente produtivo e ao negócio do cliente, onde não é 
+             <br>possível realizar operações vitais para o andamento da 
+             <span style="background-color: #ffff00;">NOME DA EMPRESA</span>
+           </p>
+           <p style="padding-top: 4pt; text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff; width: 354px; height: 74px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 34px;">
+                 <td style="width: 78.1875px; height: 34px;" bgcolor="#D9D9D9">{{crises_no_ambiente}}</td>
+                 <td style="width: 271.312px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Ocorreram crises no ambiente</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 78.1875px; height: 34px;" bgcolor="#D9D9D9">{{não_ocorreram_crises_no_ambiente}}</td>
+                 <td style="width: 271.312px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Não ocorreram crises no ambiente</p>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+           <br style="background: #ffffff;">
+           <p style="text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="height: 87px; border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 40pt;">
+                 <td style="width: 123px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">DATA</p>
+                 </td>
+                 <td style="width: 312px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; padding-right: 58pt; text-indent: 0pt; text-align: left;">Nº DO CHAMADO TÉCNICO / DESCRIÇÃO</p>
+                 </td>
+                 <td style="width: 120px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">STATUS</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 123px; height: 34px;" bgcolor="#D9D9D9">{{data_crises}}</td>
+                 <td style="width: 312px; height: 34px;" bgcolor="#D9D9D9">{{chamado_crises}}</td>
+                 <td style="width: 120px; height: 34px;" bgcolor="#D9D9D9">{{status_crises}}</td>
+               </tr>
+             </tbody>
+           </table>
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+           <br style="background: #ffffff;">
+         </li>
+         <li data-list-text="6.">&nbsp;</li>
+         <li data-list-text="6.">&nbsp;</li>
+         <li data-list-text="6.">&nbsp;</li>
+         <li data-list-text="6.">&nbsp;</li>
+         <li data-list-text="5.">
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">6. Gestão de Incidentes</h1>
+           <p style="padding-top: 4pt; text-indent: 0pt; text-align: left;">
+             <br>
+           </p>
+           <table style="border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff; width: 354px; height: 74px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 34px;">
+                 <td style="width: 88.0078px; height: 34px;" bgcolor="#D9D9D9">{{incidentes_no_ambiente}}</td>
+                 <td style="width: 261.492px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Ocorreram crises no ambiente</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 88.0078px; height: 34px;" bgcolor="#D9D9D9">{{não_incidentes_crises_no_ambiente}}</td>
+                 <td style="width: 261.492px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Não ocorreram crises no ambiente</p>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+           <br style="background: #ffffff;">
+           <p style="text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="height: 87px; border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 40pt;">
+                 <td style="width: 123px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">DATA</p>
+                 </td>
+                 <td style="width: 312px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; padding-right: 58pt; text-indent: 0pt; text-align: left;">Nº DO CHAMADO TÉCNICO / DESCRIÇÃO</p>
+                 </td>
+                 <td style="width: 120px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">STATUS</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 123px; height: 34px;" bgcolor="#D9D9D9">{{data_incidentes}}</td>
+                 <td style="width: 312px; height: 34px;" bgcolor="#D9D9D9">{{chamado_incidentes}}</td>
+                 <td style="width: 120px; height: 34px;" bgcolor="#D9D9D9">{{status_incidentes}}</td>
+               </tr>
+             </tbody>
+           </table>
+         </li>
+         <li data-list-text="6.">
+           <h1 style="padding-left: 79pt; text-indent: -27pt; text-align: left;">
+             <a name="bookmark6"></a>
+           </h1>
+           <a name="bookmark7"></a>
+         </li>
+       </ol>
+     </li>
+   </ol>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">
+     <br>
+   </h1>
+   <br>
+   <br>
+   <br>
+   <ol>
+     <li style="list-style-type: none;">
+       <ol>
+         <li data-list-text="5.">
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">6. Gestão de Problemas 
+           </h1>
+           <p style="padding-top: 4pt; text-indent: 0pt; text-align: left;">
+             <br>
+           </p>
+           <table style="border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff; width: 354px; height: 74px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 34px;">
+                 <td style="width: 88.0078px; height: 34px;" bgcolor="#D9D9D9">{{problemas_no_ambiente}}</td>
+                 <td style="width: 261.492px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Ocorreram crises no ambiente</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 88.0078px; height: 34px;" bgcolor="#D9D9D9">{{não_problemas_no_ambiente}}</td>
+                 <td style="width: 261.492px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Não ocorreram crises no ambiente</p>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+           <br style="background: #ffffff;">
+           <p style="text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="height: 87px; border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 40pt;">
+                 <td style="width: 123px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">DATA</p>
+                 </td>
+                 <td style="width: 312px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; padding-right: 58pt; text-indent: 0pt; text-align: left;">Nº DO CHAMADO TÉCNICO / DESCRIÇÃO</p>
+                 </td>
+                 <td style="width: 120px; height: 53px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">STATUS</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 123px; height: 34px;" bgcolor="#D9D9D9">{{data_problemas}}</td>
+                 <td style="width: 312px; height: 34px;" bgcolor="#D9D9D9">{{chamado_problemas}}</td>
+                 <td style="width: 120px; height: 34px;" bgcolor="#D9D9D9">{{status_problemas}}</td>
+               </tr>
+             </tbody>
+           </table>
+         </li>
+         <li data-list-text="6.">
+           <h1 style="padding-left: 79pt; text-indent: -27pt; text-align: left;">
+             <a name="bookmark6"></a>
+           </h1>
+           <a name="bookmark7"></a>
+         </li>
+       </ol>
+     </li>
+   </ol>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">
+     <a name="bookmark8"></a>8.&nbsp; &nbsp; &nbsp;‌Gestão de Ambientes 
+   </h1>
+   <p style="padding-top: 10pt; text-indent: 0pt; text-align: left;">
+     <br style="background: #ffffff;">
+   </p>
+   <table style="height: 136px; border-collapse: collapse; margin-left: 191.68pt; background: #ffffff; border-color: #ffffff;" border="2" cellspacing="0">
+     <tbody>
+       <tr style="height: 26pt;">
+         <td style="width: 153.961px; height: 34px;" bgcolor="#D9D9D9">
+           <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">Servidor</p>
+         </td>
+         <td style="width: 165px; height: 34px;" bgcolor="#D9D9D9">
+           <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">Instância</p>
+         </td>
+       </tr>
+       <tr style="height: 26pt;">
+         <td style="width: 153.961px; height: 34px;" bgcolor="#F1F1F1">{{servidor_1}}</td>
+         <td style="width: 165px; height: 34px;" bgcolor="#F1F1F1">{{instancia_1}}</td>
+       </tr>
+       <tr style="height: 26pt;">
+         <td style="width: 153.961px; height: 34px;" bgcolor="#F1F1F1">{{servidor_2}}</td>
+         <td style="width: 165px; height: 34px;" bgcolor="#F1F1F1">{{instancia_2}}</td>
+       </tr>
+       <tr style="height: 26pt;">
+         <td style="width: 153.961px; height: 34px;" bgcolor="#F1F1F1">{{servidor_3}}</td>
+         <td style="width: 165px; height: 34px;" bgcolor="#F1F1F1">{{instancia_3}}</td>
+       </tr>
+     </tbody>
+   </table>
+   <p style="text-indent: 0pt; text-align: left;">
+     <br style="background: #ffffff;">
+   </p>
+   <br>
+   <h1 style="padding-left: 79pt; text-indent: -27pt; text-align: left;">
+     <a name="bookmark9"></a>9.&nbsp; &nbsp; &nbsp;‌Gestão de Capacidade
+   </h1>
+   <p style="padding-top: 6pt; padding-left: 41pt; text-indent: 0pt; text-align: left;">Monitoração</p>
+   <p style="padding-top: 2pt; padding-left: 41pt; text-indent: 0pt; line-height: 114%; text-align: justify;">Foram disponibilizados scripts e documentação para monitoração do banco de dados que se dá através da ferramenta Grafana. Os pontos que são monitorados nos ambientes estão listados abaixo:</p>
+   <ul id="l4">
+     <li data-list-text="●">
+       <p style="padding-left: 77pt; text-indent: -18pt; text-align: justify;">Check do Log Estatísticas</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: justify;">Check do Log Backup</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: justify;">Consumo de CPU</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: left;">Consumo de Memória</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: left;">Números de Conexões</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: left;">Deadlocks por Databases</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: left;">Locks por Databases</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: left;">Commits por Databases</p>
+     </li>
+     <li data-list-text="●">
+       <p style="padding-top: 2pt; padding-left: 77pt; text-indent: -18pt; text-align: left;">Rollbacks por Databases 
+         <br>
+       </p>
+     </li>
+   </ul>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+   <span style="font-size: 14pt;">9.1.&nbsp; &nbsp; Versão do banco de dados 
+   </span> 
+   <br>
+   <br>
+   <ol>
+    <li data-list-text="2.">
+      <table style="height: 447px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 748px;" border="2" cellspacing="0">
+        <tbody>
+          <tr style="height: 50px;">
+            <td style="width: 744.984px; height: 50px;" bgcolor="#D9D9D9">
+              <p style="text-indent: 0pt; text-align: center;">
+                <span style="font-size: 18pt;">
+                  <strong>Versão do banco de dados</strong>
+                </span>
+              </p>
+            </td>
+          </tr>
+          <tr style="height: 210px;"> <!-- 300px reduzido em 30% -->
+            <td style="width: 744.984px; height: 210px;" bgcolor="#D9D9D9">{{versao_do_banco_de_dados}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </li>
+  </ol>
+  <br><br>
+  <span style="font-size: 14pt;">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;9.2.&nbsp; &nbsp; Maiores Tabelas e Índices</span> 
+  <br><br>
+  <ol>
+    <li data-list-text="2.">
+      <table style="height: 100px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+        <tbody>
+          <tr style="height: 100px;"> <!-- 395px reduzido em 30% -->
+            <td style="width: 741px; height: 100px;" bgcolor="#D9D9D9">{{maiores_tabelas}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </li>
+  </ol>
+  <br><br>
+  <p style="padding-left: 113pt; text-indent: -47pt; text-align: left;">
+    <span style="font-size: 14pt;">9.3.&nbsp; &nbsp; Top SQL com maior tempo de processamento</span> 
+    <br><br>
+  </p>
+  <ol>
+    <li data-list-text="2.">
+      <table style="height: 100px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+        <tbody>
+          <tr style="height: 100px;"> <!-- 395px reduzido em 30% -->
+            <td style="width: 741px; height: 100px;" bgcolor="#D9D9D9">{{top_sql}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </li>
+  </ol>
+       </table>
+     </li>
+   </ol>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <p style="padding-left: 113pt; text-indent: -47pt; text-align: left;">
+     <span style="font-size: 14pt;">9.4.&nbsp; &nbsp; Monitoramento da Memória 
+     </span> 
+     <br>
+     <br>
+   </p>
+   <ol>
+     <li data-list-text="2.">
+       <table style="height: 300px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 300px;">
+             <td style="width: 741px; height: 300px;" bgcolor="#D9D9D9">{{monitoramento_memoria}}</td>
+           </tr>
+         </tbody>
+       </table>
+     </li>
+     <li data-list-text="2.">&nbsp;</li>
+   </ol>
+   <br>
+   <ol>
+     <li data-list-text="2.">
+       <p style="padding-left: 113pt; text-indent: -47pt; text-align: left;">
+         <span style="font-size: 14pt;">9.5.&nbsp; &nbsp; Monitoramento da CPU</span> 
+         <br>
+         <br>
+       </p>
+       <ol>
+         <li data-list-text="2.">
+           <table style="height: 300px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 300px;">
+                 <td style="width: 741px; height: 300px;" bgcolor="#D9D9D9">{{monitoramento_cpu}}</td>
+               </tr>
+             </tbody>
+           </table>
+         </li>
+       </ol>
+     </li>
+   </ol>
+   <br>
+   <br>
+   <ol>
+     <li data-list-text="2.">
+       <p style="padding-left: 113pt; text-indent: -47pt; text-align: left;">
+         <span style="font-size: 14pt;">9.6.&nbsp; &nbsp; Crescimento da Base</span> 
+         <br>
+         <br>
+       </p>
+       <ol>
+         <li data-list-text="2.">
+           <table style="height: 300px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 300px;">
+                 <td style="width: 741px; height: 300px;" bgcolor="#D9D9D9">{{crescimento_base}}</td>
+               </tr>
+             </tbody>
+           </table>
+         </li>
+       </ol>
+     </li>
+   </ol>
+   <br>
+   <br>
+   <br>
+   <br>
+   <br>
+   <p style="padding-left: 113pt; text-indent: -47pt; text-align: left;">
+     <br>
+     <br>
+     <br>
+     <br>
+   </p>
+   <br>
+   <ol>
+     <li style="list-style-type: none;">
+       <ol>
+         <li data-list-text="5.">
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">10.&nbsp; &nbsp; &nbsp;Backup 
+           </h1>
+           <p style="padding-top: 4pt; text-indent: 0pt; text-align: left;">
+             <span style="font-size: 14pt;">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;10.1.&nbsp; &nbsp; Backup do banco de dados 
+               <br>
+               <br>
+               <br>
+             </span>
+           </p>
+           <table style="border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff; width: 493px; height: 68px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 34px;">
+                 <td style="width: 126px; height: 34px;" bgcolor="#D9D9D9">{{desvios_backup}}</td>
+                 <td style="width: 362.484px; height: 34px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Houveram desvios nos Backup's neste mês.</p>
+                 </td>
+               </tr>
+               <tr style="height: 26pt;">
+                 <td style="width: 126px; height: 34px;" bgcolor="#D9D9D9">{{não_houveram_desvios}}</td>
+                 <td style="width: 362.484px; height: 34px;">
+                   <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Não houveram desvios nos backup's neste mês.</p>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+           <br style="background: #ffffff;">
+           <p style="text-indent: 0pt; text-align: left;">
+             <br style="background: #ffffff;">
+           </p>
+           <table style="height: 68px; border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff; width: 693px;" border="2" cellspacing="0">
+             <tbody>
+               <tr style="height: 34px;">
+                 <td style="width: 94.75px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">DATA</p>
+                 </td>
+                 <td style="width: 243.188px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; padding-right: 58pt; text-indent: 0pt; text-align: left;">DESVIO</p>
+                 </td>
+                 <td style="width: 243.188px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; padding-right: 58pt; text-indent: 0pt; text-align: left;">AÇÃO</p>
+                 </td>
+                 <td style="width: 105.208px; height: 34px;" bgcolor="#D9D9D9">
+                   <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">STATUS</p>
+                 </td>
+               </tr>
+               <tr style="height: 34px;">
+                 <td style="width: 94.75px; height: 34px;" bgcolor="#D9D9D9">{{data_backup}}</td>
+                 <td style="width: 243.188px; height: 34px;" bgcolor="#D9D9D9">{{desvio_backup}}</td>
+                 <td style="width: 243.188px; height: 34px;" bgcolor="#D9D9D9">{{acao_backup}}</td>
+                 <td style="width: 105.208px; height: 34px;" bgcolor="#D9D9D9">{{status_backup}}</td>
+               </tr>
+             </tbody>
+           </table>
+         </li>
+         <li data-list-text="6.">
+           <h1 style="padding-left: 79pt; text-indent: -27pt; text-align: left;">
+             <a name="bookmark6"></a>
+           </h1>
+           <a name="bookmark7"></a>
+         </li>
+       </ol>
+     </li>
+   </ol>
+   <br>
+   <ol>
+     <li style="list-style-type: none;">
+       <ol>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">&nbsp;</li>
+       </ol>
+     </li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li data-list-text="5.">
+       <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">11.&nbsp; &nbsp; &nbsp; Melhorias 
+       </h1>
+       <p style="padding-top: 4pt; text-indent: 0pt; text-align: left;">
+         <br>
+       </p>
+       <table style="border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff; width: 574px; height: 74px;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 34px;">
+             <td style="width: 97.5234px; height: 34px;" bgcolor="#D9D9D9">{{houveram_melhorias}}</td>
+             <td style="width: 471.961px;">
+               <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Houveram melhorias apontadas/implementadas neste mês.</p>
+             </td>
+           </tr>
+           <tr style="height: 26pt;">
+             <td style="width: 97.5234px; height: 34px;" bgcolor="#D9D9D9">{{não_houveram_melhorias}}</td>
+             <td style="width: 471.961px;">
+               <p style="text-indent: 0pt; text-align: left;">&nbsp; &nbsp;Não houve melhorias apontadas/implementadas neste mês.</p>
+             </td>
+           </tr>
+         </tbody>
+       </table>
+       <br style="background: #ffffff;">
+       <p style="text-indent: 0pt; text-align: left;">
+         <br style="background: #ffffff;">
+       </p>
+       <table style="height: 65px; border-collapse: collapse; margin-left: 101.05pt; border-color: #ffffff; background: #ffffff;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 40pt;">
+             <td style="width: 123px; height: 31px;" bgcolor="#D9D9D9">
+               <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">DATA</p>
+             </td>
+             <td style="width: 312px; height: 31px;" bgcolor="#D9D9D9">
+               <p class="s17" style="padding-top: 5pt; padding-left: 4pt; padding-right: 58pt; text-indent: 0pt; text-align: left;">MELHORIA</p>
+             </td>
+             <td style="width: 120px; height: 31px;" bgcolor="#D9D9D9">
+               <p class="s17" style="padding-top: 5pt; padding-left: 4pt; text-indent: 0pt; text-align: left;">AÇÃO</p>
+             </td>
+           </tr>
+           <tr style="height: 26pt;">
+             <td style="width: 123px; height: 34px;" bgcolor="#D9D9D9">{{data_melhorias}}</td>
+             <td style="width: 312px; height: 34px;" bgcolor="#D9D9D9">{{melhoria_melhorias}}</td>
+             <td style="width: 120px; height: 34px;" bgcolor="#D9D9D9">{{acao_melhorias}}</td>
+           </tr>
+         </tbody>
+       </table>
+     </li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;</li>
+     <li style="list-style-type: none;">&nbsp;
+       <ol>
+         <li style="list-style-type: none;">&nbsp;</li>
+         <li style="list-style-type: none;">
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt; text-align: left;">12.&nbsp; &nbsp; &nbsp; Conclusão 
+           </h1>
+           <br>
+           <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -34pt; text-align: left;">
+             <a name="bookmark11"></a>
+           </h1>
+         </li>
+       </ol>
+     </li>
+   </ol>
+   <p style="text-indent: 0pt; text-align: left;">
+     <br style="background: #ffffff;">
+   </p>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">Performance:</h1>
+   <ol>
+     <li data-list-text="2.">
+       <table style="height: 200px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 200px;">
+             <td style="width: 741px; height: 200px;" bgcolor="#D9D9D9">{{performance}}</td>
+           </tr>
+         </tbody>
+       </table>
+     </li>
+     <li data-list-text="2.">&nbsp;</li>
+   </ol>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">Administração:</h1>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">
+     <br>
+   </h1>
+   <ol>
+     <li data-list-text="2.">
+       <table style="height: 200px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 200px;">
+             <td style="width: 741px; height: 200px;" bgcolor="#D9D9D9">{{administracao}}</td>
+           </tr>
+         </tbody>
+       </table>
+     </li>
+     <li data-list-text="2.">
+       <br>
+     </li>
+   </ol>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">&nbsp;</h1>
+   <p style="padding-left: 41pt; text-indent: 0pt; text-align: left;">
+     <u>
+       <strong>Pendências</strong>
+     </u>:
+   </p>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">
+     <br>
+   </h1>
+   <ol>
+     <li data-list-text="2.">
+       <table style="height: 200px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 200px;">
+             <td style="width: 741px; height: 200px;" bgcolor="#D9D9D9">{{pendencias}}</td>
+           </tr>
+         </tbody>
+       </table>
+     </li>
+     <li data-list-text="2.">
+       <br>
+     </li>
+   </ol>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">&nbsp;</h1>
+   <p class="s22" style="padding-left: 41pt; text-indent: 0pt; text-align: left;">Projetos: 
+     <br>
+   </p>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">
+     <br>
+   </h1>
+   <ol>
+     <li data-list-text="2.">
+       <table style="height: 200px; border-collapse: collapse; margin-left: 66.425pt; border-color: #ffffff; background: #ffffff; width: 744px;" border="2" cellspacing="0">
+         <tbody>
+           <tr style="height: 200px;">
+             <td style="width: 741px; height: 200px;" bgcolor="#D9D9D9">{{projetos}}</td>
+           </tr>
+         </tbody>
+       </table>
+     </li>
+     <li data-list-text="2.">
+       <br>
+     </li>
+   </ol>
+   <h1 style="padding-left: 41pt; text-indent: 0pt; text-align: left;">&nbsp;</h1>
+  </style>
+</head>
+<body>

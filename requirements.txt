@@ -3,8 +3,7 @@ numpy
 pyzabbix
 flask
 jaydebeapi
-PyPDF2
-reportlab
+pdfkit
 psycopg2-binary
 python-dotenv
 tkinterweb
