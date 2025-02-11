@@ -1,60 +1,127 @@
+import jaydebeapi
 import jinja2
 import pdfkit
+import os
+import json
+import logging
+from dotenv import load_dotenv
 
-# Dados para preenchimento do template
-informacoes_servidor = "exemplo1"
-versao_do_banco_de_dados = "exemplo27"
-maiores_tabelas = "exemplo28"
-top_sql = "exemplo29"
-monitoramento_memoria = "exemplo30"
-monitoramento_cpu = "exemplo31"
-crescimento_base = "exemplo32"
-desvios_backup = "exemplo33"
-nao_houveram_desvios = "exemplo34"  # Removido caractere especial
-data_backup = "exemplo35"
-desvio_backup = "exemplo36"
-acao_backup = "exemplo37"
-status_backup = "exemplo38"
+load_dotenv()
 
-# Criando o dicionário de contexto para o template
-context = {
-    'informacoes_servidor': informacoes_servidor,
-    'versao_do_banco_de_dados': versao_do_banco_de_dados,
-    'maiores_tabelas': maiores_tabelas,
-    'top_sql': top_sql,
-    'monitoramento_memoria': monitoramento_memoria,
-    'monitoramento_cpu': monitoramento_cpu,
-    'crescimento_base': crescimento_base,
-    'desvios_backup': desvios_backup,
-    'nao_houveram_desvios': nao_houveram_desvios,
-    'data_backup': data_backup,
-    'desvio_backup': desvio_backup,
-    'acao_backup': acao_backup,
-    'status_backup': status_backup,
-}
+# Configuração de logs
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configurando Jinja2 para carregar templates
-template_loader = jinja2.FileSystemLoader('./')
-template_env = jinja2.Environment(loader=template_loader)
+# Configurações JDBC
+user = os.getenv("USER_JDBC")
+password = os.getenv("PASS_JDBC")
+jdbc_jar = os.getenv("JAR_JDBC")
 
-try:
-    template = template_env.get_template("static/assets/pgr.html")
-except jinja2.exceptions.TemplateNotFound:
-    print("Erro: O template 'pgr.html' não foi encontrado. Verifique o nome e o local do arquivo.")
-    exit(1)
+# Caminho do template HTML
+template_path = "static/assets/pgr.html"
 
-# Renderiza o template com os dados do contexto
-output_text = template.render(context)
+# Carregar configurações do cliente
+storage_file = 'client_info.json'
 
-# Configuração correta do wkhtmltopdf para Linux (Debian)
-config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
 
-# Definição de opções para geração do PDF
-options = {
-    "encoding": "UTF-8"
-}
+def carregar_configuracoes_do_storage():
+    """Carrega configurações do cliente a partir de client_info.json"""
+    if os.path.exists(storage_file):
+        with open(storage_file, 'r') as f:
+            data = json.load(f)
+            ip = data.get('ip')
+            db_name = data.get('nomebanco')
+            port = data.get('portabanco')
 
-# Gerando o PDF
-pdfkit.from_string(output_text, 'pgrdavi.pdf', configuration=config, options=options)
+            if not all([ip, db_name, user, password]):
+                raise ValueError("Informações incompletas no arquivo de armazenamento.")
 
-print("PDF gerado com sucesso!")
+            jdbc_url = f"jdbc:oracle:thin:@{ip}:{port}/{db_name}"
+            logging.info(f"String de conexão montada: {jdbc_url}")
+            return jdbc_url, user, password
+    else:
+        raise FileNotFoundError("Arquivo 'client_info.json' não encontrado.")
+
+
+def executar_consulta(conexao, query):
+    """Executa uma consulta e retorna o resultado"""
+    cursor = conexao.cursor()
+    try:
+        cursor.execute(query)
+        resultado = cursor.fetchall()
+        return resultado
+    except jaydebeapi.DatabaseError as e:
+        logging.error(f"Erro ao executar a query: {e}")
+        return None
+    finally:
+        cursor.close()
+
+
+def obter_dados_do_banco():
+    """Executa as consultas e retorna um dicionário com os dados formatados"""
+    jdbc_url, user, password = carregar_configuracoes_do_storage()
+    
+    try:
+        conexao = jaydebeapi.connect('oracle.jdbc.driver.OracleDriver', jdbc_url, [user, password], jdbc_jar)
+
+        consultas = {
+            "versao_do_banco_de_dados": "SELECT version FROM PRODUCT_COMPONENT_VERSION WHERE product LIKE 'Oracle Database%'",
+            "maiores_tabelas": """SELECT table_name, bytes/1024/1024/1024 AS tamanho_gb 
+                                  FROM dba_segments WHERE segment_type = 'TABLE'
+                                  ORDER BY tamanho_gb DESC FETCH FIRST 1 ROWS ONLY""",
+            "top_sql": """SELECT sql_text FROM v$sqlarea ORDER BY elapsed_time DESC FETCH FIRST 1 ROWS ONLY""",
+            "monitoramento_memoria": """SELECT resource_name, current_utilization FROM v$resource_limit WHERE resource_name = 'processes'""",
+            "monitoramento_cpu": """SELECT resource_name, current_utilization FROM v$resource_limit WHERE resource_name = 'sessions'""",
+            "crescimento_base": """SELECT round(sum(used.bytes) / 1024 / 1024 / 1024) || ' GB' AS tamanho
+                                   FROM (SELECT bytes FROM v$datafile UNION ALL
+                                         SELECT bytes FROM v$tempfile UNION ALL
+                                         SELECT bytes FROM v$log) used""",
+            "desvios_backup": """SELECT COUNT(*) FROM v$RMAN_BACKUP_JOB_DETAILS WHERE status != 'COMPLETED'""",
+            "data_backup": """SELECT MAX(start_time) FROM v$RMAN_BACKUP_JOB_DETAILS""",
+            "desvio_backup": """SELECT status FROM v$RMAN_BACKUP_JOB_DETAILS WHERE ROWNUM = 1 ORDER BY start_time DESC""",
+            "acao_backup": """SELECT time_taken_display FROM v$RMAN_BACKUP_JOB_DETAILS WHERE ROWNUM = 1 ORDER BY start_time DESC""",
+            "status_backup": """SELECT DISTINCT status FROM v$RMAN_BACKUP_JOB_DETAILS""",
+        }
+
+        dados = {}
+        for chave, query in consultas.items():
+            resultado = executar_consulta(conexao, query)
+            if resultado:
+                dados[chave] = resultado[0][0]  # Pegando o primeiro valor da primeira linha do resultado
+            else:
+                dados[chave] = "Não disponível"
+
+        return dados
+    except jaydebeapi.DatabaseError as e:
+        logging.error(f"Erro ao conectar ao banco: {e}")
+        return {}
+    finally:
+        if 'conexao' in locals() and conexao:
+            conexao.close()
+
+
+def gerar_pdf(dados):
+    """Gera um PDF a partir do template preenchido"""
+    template_loader = jinja2.FileSystemLoader('./')
+    template_env = jinja2.Environment(loader=template_loader)
+
+    try:
+        template = template_env.get_template(template_path)
+    except jinja2.exceptions.TemplateNotFound:
+        logging.error("Erro: O template 'pgr.html' não foi encontrado.")
+        exit(1)
+
+    output_text = template.render(dados)
+
+    config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
+
+    options = {
+        "encoding": "UTF-8"
+    }
+
+    pdfkit.from_string(output_text, 'pgr_final.pdf', configuration=config, options=options)
+    print("PDF gerado com sucesso!")
+
+
+if __name__ == "__main__":
+    dados_extraidos = obter_dados_do_banco()
+    gerar_pdf(dados_extraidos)
