@@ -10,3 +10,4 @@ tkinterweb
 plotly
 kaleido
 scipy
+paramiko
