@@ -67,30 +67,6 @@ def obter_dados_do_banco():
             "versao_do_banco_de_dados": """SELECT version 
                                             FROM PRODUCT_COMPONENT_VERSION 
                                             WHERE product LIKE 'Oracle Database%'""",
-
-            "usuarios_ativos": """SELECT username 
-                                  FROM dba_users 
-                                  WHERE account_status = 'OPEN' 
-                                  ORDER BY username""",
-
-            "recursos_do_banco": """SELECT resource_name, current_utilization, max_utilization 
-                                    FROM v$resource_limit 
-                                    WHERE resource_name IN ('processes', 'sessions')""",
-
-            "tamanho_espaco_banco": """SELECT 
-                                          round(sum(used.bytes) / 1024 / 1024 / 1024) || ' GB' AS "Database Size",
-                                          round(sum(used.bytes) / 1024 / 1024 / 1024) - 
-                                          round(free.p / 1024 / 1024 / 1024) || ' GB' AS "Used space",
-                                          round(free.p / 1024 / 1024 / 1024) || ' GB' AS "Free space"
-                                       FROM 
-                                          (SELECT bytes FROM v$datafile
-                                           UNION ALL
-                                           SELECT bytes FROM v$tempfile
-                                           UNION ALL
-                                           SELECT bytes FROM v$log) used,
-                                          (SELECT sum(bytes) AS p FROM dba_free_space) free
-                                       GROUP BY free.p""",
-
             "maiores_tabelas": """SELECT * 
                                   FROM 
                                     (SELECT owner, segment_name AS table_name, bytes/1024/1024/1024 AS "SIZE (GB)"
@@ -100,7 +76,7 @@ def obter_dados_do_banco():
                                      ORDER BY 3 DESC) 
                                   WHERE rownum <= 20""",
 
-            "top_10_queries_lentas": """SELECT rownum AS rank, a.* 
+            "top_sql": """SELECT rownum AS rank, a.* 
                                         FROM 
                                           (SELECT elapsed_Time/1000000 AS elapsed_time, executions, cpu_time, sql_id, sql_text
                                            FROM v$sqlarea 
@@ -108,7 +84,7 @@ def obter_dados_do_banco():
                                            ORDER BY elapsed_time DESC) a 
                                         WHERE rownum < 11""",
 
-            "detalhes_backup_rman": """SELECT
+            "print_backup": """SELECT
                                           TO_CHAR(j.start_time, 'yyyy-mm-dd hh24:mi:ss') AS start_time,
                                           TO_CHAR(j.end_time, 'yyyy-mm-dd hh24:mi:ss') AS end_time,
                                           (j.output_bytes/1024/1024) AS output_mbytes,
@@ -158,7 +134,7 @@ def obter_dados_do_banco():
         for chave, query in consultas.items():
             resultado = executar_consulta(conexao, query)
             if resultado:
-                dados[chave] = resultado[0][0]  # Pegando o primeiro valor da primeira linha do resultado
+                dados[chave] = resultado
             else:
                 dados[chave] = "Não disponível"
 
