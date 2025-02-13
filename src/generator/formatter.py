@@ -4,6 +4,7 @@ import pdfkit
 import os
 import json
 import logging
+import paramiko
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,16 +13,19 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Configurações JDBC
-user = os.getenv("USER_JDBC")
-password = os.getenv("PASS_JDBC")
+jdbc_user = os.getenv("USER_JDBC")
+jdbc_password = os.getenv("PASS_JDBC")
 jdbc_jar = os.getenv("JAR_JDBC")
+
+# Configurações SO
+ssh_user = os.getenv("USER_OS")
+ssh_password = os.getenv("PASS_OS")
 
 # Caminho do template HTML
 template_path = "static/assets/pgr.html"
 
 # Carregar configurações do cliente
 storage_file = 'client_info.json'
-
 
 def carregar_configuracoes_do_storage():
     """Carrega configurações do cliente a partir de client_info.json"""
@@ -30,17 +34,17 @@ def carregar_configuracoes_do_storage():
             data = json.load(f)
             ip = data.get('ip')
             db_name = data.get('nomebanco')
-            port = data.get('portabanco')
+            port_jdbc = data.get('portabanco')
+            port_ssh = data.get('portassh')
 
-            if not all([ip, db_name, user, password]):
+            if not all([ip, db_name, jdbc_user, jdbc_password]):
                 raise ValueError("Informações incompletas no arquivo de armazenamento.")
 
-            jdbc_url = f"jdbc:oracle:thin:@{ip}:{port}/{db_name}"
+            jdbc_url = f"jdbc:oracle:thin:@{ip}:{port_jdbc}/{db_name}"
             logging.info(f"String de conexão montada: {jdbc_url}")
-            return jdbc_url, user, password
+            return jdbc_url, jdbc_user, jdbc_password
     else:
         raise FileNotFoundError("Arquivo 'client_info.json' não encontrado.")
-
 
 def executar_consulta(conexao, query):
     """Executa uma consulta e retorna o resultado"""
@@ -55,79 +59,128 @@ def executar_consulta(conexao, query):
     finally:
         cursor.close()
 
+def obter_dados_do_servidor():
+    """Executa os comandos solicitados via SSH e retorna os resultados
+    agrupados na chave 'Informações do Servidor Produtivo'"""
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        with open(storage_file, 'r') as f:
+            data = json.load(f)
+            ip = data.get('ip')
+            port_ssh = data.get('portassh')
+        
+        ssh.connect(ip, port=int(port_ssh), username=ssh_user, password=ssh_password)
+
+        comandos = [
+            "hostname",
+            "ifconfig | grep inet | awk '{ print $2 }'",
+            "cat /etc/*release*",
+            "free -m",
+            "df -h",
+            "free -h"
+        ]
+
+        output_total = ""
+        for comando in comandos:
+            stdin, stdout, stderr = ssh.exec_command(comando)
+            saida = stdout.read().decode()
+            erros = stderr.read().decode()
+            # Se houver erro, mas for o comando "df -h" e a mensagem mencionar "gvfs", ignoramos-o
+            if erros:
+                if comando == "df -h" and "gvfs" in erros:
+                    output_total += f"{comando}:\n{saida}\n"
+                else:
+                    logging.error(f"Erro ao executar comando {comando}: {erros}")
+                    output_total += f"Erro ao executar comando {comando}: {erros}\n"
+            else:
+                output_total += f"{comando}:\n{saida}\n"
+        
+        ssh.close()
+        return {"Informações do Servidor Produtivo": output_total}
+    except paramiko.SSHException as e:
+        logging.error(f"Erro na conexão SSH: {e}")
+        return {"Informações do Servidor Produtivo": "Erro na conexão SSH"}
 
 def obter_dados_do_banco():
     """Executa as consultas e retorna um dicionário com os dados formatados"""
-    jdbc_url, user, password = carregar_configuracoes_do_storage()
+    jdbc_url, jdbc_user, jdbc_password = carregar_configuracoes_do_storage()
     
     try:
-        conexao = jaydebeapi.connect('oracle.jdbc.driver.OracleDriver', jdbc_url, [user, password], jdbc_jar)
+        conexao = jaydebeapi.connect('oracle.jdbc.driver.OracleDriver', jdbc_url, [jdbc_user, jdbc_password], jdbc_jar)
 
         consultas = {
-            "versao_do_banco_de_dados": """SELECT version 
-                                            FROM PRODUCT_COMPONENT_VERSION 
-                                            WHERE product LIKE 'Oracle Database%'""",
-            "maiores_tabelas": """SELECT * 
-                                  FROM 
-                                    (SELECT owner, segment_name AS table_name, bytes/1024/1024/1024 AS "SIZE (GB)"
-                                     FROM dba_segments 
-                                     WHERE segment_type = 'TABLE'
-                                     AND segment_name NOT LIKE 'BIN%' 
-                                     ORDER BY 3 DESC) 
-                                  WHERE rownum <= 20""",
-
-            "top_sql": """SELECT rownum AS rank, a.* 
-                                        FROM 
-                                          (SELECT elapsed_Time/1000000 AS elapsed_time, executions, cpu_time, sql_id, sql_text
-                                           FROM v$sqlarea 
-                                           WHERE elapsed_time/1000000 > 5 
-                                           ORDER BY elapsed_time DESC) a 
-                                        WHERE rownum < 11""",
-
-            "print_backup": """SELECT
-                                          TO_CHAR(j.start_time, 'yyyy-mm-dd hh24:mi:ss') AS start_time,
-                                          TO_CHAR(j.end_time, 'yyyy-mm-dd hh24:mi:ss') AS end_time,
-                                          (j.output_bytes/1024/1024) AS output_mbytes,
-                                          j.status, 
-                                          j.input_type,
-                                          DECODE(TO_CHAR(j.start_time, 'd'), 
-                                                 1, 'Sunday', 
-                                                 2, 'Monday', 
-                                                 3, 'Tuesday', 
-                                                 4, 'Wednesday', 
-                                                 5, 'Thursday', 
-                                                 6, 'Friday', 
-                                                 7, 'Saturday') AS dow,
-                                          j.elapsed_seconds, 
-                                          j.time_taken_display,
-                                          x.cf, 
-                                          x.df, 
-                                          x.i0, 
-                                          x.i1, 
-                                          x.l,
-                                          ro.inst_id AS output_instance
-                                        FROM v$RMAN_BACKUP_JOB_DETAILS j
-                                        LEFT OUTER JOIN 
-                                          (SELECT 
-                                             d.session_recid, 
-                                             d.session_stamp,
-                                             SUM(CASE WHEN d.controlfile_included = 'YES' THEN d.pieces ELSE 0 END) AS CF,
-                                             SUM(CASE WHEN d.controlfile_included = 'NO' AND d.backup_type||d.incremental_level = 'D' THEN d.pieces ELSE 0 END) AS DF,
-                                             SUM(CASE WHEN d.backup_type||d.incremental_level = 'D0' THEN d.pieces ELSE 0 END) AS I0,
-                                             SUM(CASE WHEN d.backup_type||d.incremental_level = 'I1' THEN d.pieces ELSE 0 END) AS I1,
-                                             SUM(CASE WHEN d.backup_type = 'L' THEN d.pieces ELSE 0 END) AS L
-                                           FROM v$BACKUP_SET_DETAILS d
-                                           JOIN v$BACKUP_SET s ON s.set_stamp = d.set_stamp AND s.set_count = d.set_count
-                                           WHERE s.input_file_scan_only = 'NO'
-                                           GROUP BY d.session_recid, d.session_stamp) x 
-                                        ON x.session_recid = j.session_recid AND x.session_stamp = j.session_stamp
-                                        LEFT OUTER JOIN 
-                                          (SELECT o.session_recid, o.session_stamp, MIN(inst_id) AS inst_id
-                                           FROM Gv$RMAN_OUTPUT o
-                                           GROUP BY o.session_recid, o.session_stamp) ro 
-                                        ON ro.session_recid = j.session_recid AND ro.session_stamp = j.session_stamp
-                                        WHERE j.start_time > TRUNC(SYSDATE)-7
-                                        ORDER BY j.start_time"""
+            "versao_do_banco_de_dados": """
+                SELECT version 
+                FROM PRODUCT_COMPONENT_VERSION 
+                WHERE product LIKE 'Oracle Database%'
+            """,
+            "maiores_tabelas": """
+                SELECT * 
+                FROM 
+                    (SELECT owner, segment_name AS table_name, bytes/1024/1024/1024 AS "SIZE (GB)"
+                     FROM dba_segments 
+                     WHERE segment_type = 'TABLE'
+                     AND segment_name NOT LIKE 'BIN%' 
+                     ORDER BY 3 DESC) 
+                WHERE rownum <= 20
+            """,
+            "top_sql": """
+                SELECT rownum AS rank, a.* 
+                FROM 
+                    (SELECT elapsed_Time/1000000 AS elapsed_time, executions, cpu_time, sql_id, sql_text
+                     FROM v$sqlarea 
+                     WHERE elapsed_time/1000000 > 5 
+                     ORDER BY elapsed_time DESC) a 
+                WHERE rownum < 11
+            """,
+            "print_backup": """
+                SELECT
+                    TO_CHAR(j.start_time, 'yyyy-mm-dd hh24:mi:ss') AS start_time,
+                    TO_CHAR(j.end_time, 'yyyy-mm-dd hh24:mi:ss') AS end_time,
+                    (j.output_bytes/1024/1024) AS output_mbytes,
+                    j.status, 
+                    j.input_type,
+                    DECODE(TO_CHAR(j.start_time, 'd'), 
+                           1, 'Sunday', 
+                           2, 'Monday', 
+                           3, 'Tuesday', 
+                           4, 'Wednesday', 
+                           5, 'Thursday', 
+                           6, 'Friday', 
+                           7, 'Saturday') AS dow,
+                    j.elapsed_seconds, 
+                    j.time_taken_display,
+                    x.cf, 
+                    x.df, 
+                    x.i0, 
+                    x.i1, 
+                    x.l,
+                    ro.inst_id AS output_instance
+                FROM v$RMAN_BACKUP_JOB_DETAILS j
+                LEFT OUTER JOIN 
+                    (SELECT 
+                        d.session_recid, 
+                        d.session_stamp,
+                        SUM(CASE WHEN d.controlfile_included = 'YES' THEN d.pieces ELSE 0 END) AS CF,
+                        SUM(CASE WHEN d.controlfile_included = 'NO' AND d.backup_type||d.incremental_level = 'D' THEN d.pieces ELSE 0 END) AS DF,
+                        SUM(CASE WHEN d.backup_type||d.incremental_level = 'D0' THEN d.pieces ELSE 0 END) AS I0,
+                        SUM(CASE WHEN d.backup_type||d.incremental_level = 'I1' THEN d.pieces ELSE 0 END) AS I1,
+                        SUM(CASE WHEN d.backup_type = 'L' THEN d.pieces ELSE 0 END) AS L
+                    FROM v$BACKUP_SET_DETAILS d
+                    JOIN v$BACKUP_SET s ON s.set_stamp = d.set_stamp AND s.set_count = d.set_count
+                    WHERE s.input_file_scan_only = 'NO'
+                    GROUP BY d.session_recid, d.session_stamp) x 
+                ON x.session_recid = j.session_recid AND x.session_stamp = j.session_stamp
+                LEFT OUTER JOIN 
+                    (SELECT o.session_recid, o.session_stamp, MIN(inst_id) AS inst_id
+                     FROM Gv$RMAN_OUTPUT o
+                     GROUP BY o.session_recid, o.session_stamp) ro 
+                ON ro.session_recid = j.session_recid AND ro.session_stamp = j.session_stamp
+                WHERE j.start_time > TRUNC(SYSDATE)-7
+                ORDER BY j.start_time
+            """
         }
 
         dados = {}
@@ -138,6 +191,9 @@ def obter_dados_do_banco():
             else:
                 dados[chave] = "Não disponível"
 
+        dados_servidor = obter_dados_do_servidor()
+        dados.update(dados_servidor)
+
         return dados
     except jaydebeapi.DatabaseError as e:
         logging.error(f"Erro ao conectar ao banco: {e}")
@@ -145,7 +201,6 @@ def obter_dados_do_banco():
     finally:
         if 'conexao' in locals() and conexao:
             conexao.close()
-
 
 def gerar_pdf(dados):
     """Gera um PDF a partir do template preenchido"""
@@ -168,7 +223,6 @@ def gerar_pdf(dados):
 
     pdfkit.from_string(output_text, 'pgr_final.pdf', configuration=config, options=options)
     print("PDF gerado com sucesso!")
-
 
 if __name__ == "__main__":
     dados_extraidos = obter_dados_do_banco()
