@@ -1,196 +1,156 @@
 import os
-import logging
-from datetime import datetime, timedelta
-from flask import Flask, jsonify
-from pyzabbix import ZabbixAPI
-from dotenv import load_dotenv
-import requests
+import time
 import json
+import requests
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from scipy.signal import argrelextrema
+from dotenv import load_dotenv
+import logging
 from concurrent.futures import ThreadPoolExecutor
+
+logging.basicConfig(filename='logs/zabbix.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 load_dotenv()
 
-zabbix_url = os.getenv("URL_ZABBIX")
-zabbix_user = os.getenv("USER_ZABBIX")
-zabbix_password = os.getenv("PASS_ZABBIX")
+zabbix_url = os.getenv("URL_ZBX")
+zabbix_user = os.getenv("USER_ZBX")
+zabbix_pass = os.getenv("PASS_ZBX")
+zabbix_auth = os.getenv("AUTH_ZBX")
 
-log_dir = os.path.join(os.getcwd(), "logs")
-os.makedirs(log_dir, exist_ok=True)
-
-log_file = os.path.join(log_dir, "zabbix.log")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
-output_dir = os.path.join(os.getcwd(), "output", "images")
-os.makedirs(output_dir, exist_ok=True)
-
-def load_host_id_from_storage():
-    storage_file = 'client_info.json' 
-    if os.path.exists(storage_file):
-        with open(storage_file, 'r') as f:
-            data = json.load(f)
-            return data.get('idhostzbx', None)
-    return None
-
-def connect_zabbix():
-    zapi = ZabbixAPI(zabbix_url)
-    zapi.login(zabbix_user, zabbix_password)
-    logging.info(f"Connected to Zabbix API version {zapi.api_version()}")
-    return zapi
-
-def get_three_months_period():
-    today = datetime.today()
-    three_months_ago = today - timedelta(days=90)
-    
-    stime = int(three_months_ago.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
-    etime = int(today.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
-    
-    logging.info(f"Período de três meses: {three_months_ago.date()} até {today.date()}")
-    return stime, etime
-
-def download_graph_zabbix_via_http(session, graphid, graph_name, host_name, stime, etime):
-
-    graph_filename = f"grafico_{graphid}.png"
-    graph_path = os.path.join(output_dir, graph_filename)
-    
-    if os.path.exists(graph_path):
-        logging.info(f"Graph {graph_filename} já foi baixado anteriormente. Usando o arquivo local.")
-        return graph_path
-
-    # Caso o gráfico não esteja no storage, faça a requisição HTTP para baixá-lo
-    graph_url = f"{zabbix_url}/chart2.php?graphid={graphid}&stime={stime}&etime={etime}"
-    logging.info(f"Gerada URL para gráfico {graphid} do host {host_name}: {graph_url}")
-    
+def load_host_id():
+    """Carregar o ID do host do arquivo client_info.json"""
     try:
-        response = session.get(graph_url, stream=True)
-        response.raise_for_status()
-
-        filename = (lambda graph_name: 
-                    "grafico_memoria.png" if "memória" in graph_name.lower() 
-                    else "grafico_cpu.png" if "CPU - utilização" in graph_name 
-                    else f"grafico_{graphid}.png")(graph_name)
-
-        graph_path = os.path.join(output_dir, filename)
-        with open(graph_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                f.write(chunk)
-
-        logging.info(f"Gráfico {graphid} do host {host_name} salvo em {graph_path}")
-        return graph_path
-
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Erro ao baixar gráfico {graphid} para o host {host_name}: {e}")
+        with open("client_info.json", "r") as f:
+            return json.load(f).get("idhostzbx")
+    except Exception as e:
+        logging.error(f"Error loading client_info.json: {e}")
         return None
 
-# Função para fazer o download dos gráficos automaticamente
-def download_graphs_automatically():
-    try:
-        host_id = load_host_id_from_storage()
-        if not host_id:
-            logging.error("HOST_ID não encontrado no armazenamento local.")
+class ZabbixAPI:
+    def __init__(self, url, user, password, auth_token=None):
+        self.url = url
+        self.user = user
+        self.password = password
+        self.auth_token = auth_token
+
+    def connect(self):
+        """Conectar à API do Zabbix e obter o token de autenticação"""
+        if not self.auth_token:
+            self.auth_token = os.getenv("AUTH_ZBX")
+            if not self.auth_token:
+                raise ValueError("Auth token is not provided.")
+        logging.info(f"Using Auth Token: {self.auth_token}")
+
+    def _post_request(self, data):
+        """Método para enviar requisições POST para a API Zabbix"""
+        try:
+            response = requests.post(self.url, json=data, headers={'Content-Type': 'application/json'})
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logging.error(f"Request error: {e}")
+            raise
+
+    def get_host_items(self, host_id):
+        """Obter itens do host via Zabbix API"""
+        data = {
+            "jsonrpc": "2.0",
+            "method": "item.get",
+            "params": {"hostids": host_id, "output": "extend"},
+            "auth": self.auth_token,
+            "id": 1
+        }
+        return self._post_request(data).get("result", [])
+
+
+class GraphGenerator:
+    def __init__(self, zabbix_api):
+        self.zabbix_api = zabbix_api
+
+    def generate_graph(self, host_name, item_type, history_data):
+        """Gerar gráfico a partir dos dados históricos do Zabbix"""
+        df = self.prepare_data(history_data)
+        if df.empty:
+            logging.warning(f"Insufficient data for {item_type} on host {host_name}.")
             return
 
-        zapi = connect_zabbix()
-        host = zapi.host.get(hostids=host_id, output=['hostid', 'name'])
-        if not host:
-            logging.error(f"Nenhum host encontrado com o ID {host_id}.")
-            return
+        min_loc, max_loc = self.get_local_extrema(df)
+        fig = self.create_figure(df, min_loc, max_loc, host_name, item_type)
+        self.save_graph(fig, item_type)
 
-        host_name = host[0]['name']
-        logging.info(f"Host identificado: {host_name}")
+    def prepare_data(self, history_data):
+        """Preparar os dados para o gráfico"""
+        timestamps = [int(i['clock']) for i in history_data]
+        values = [float(i['value']) for i in history_data]
+        dates = [time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts)) for ts in timestamps]
+        df = pd.DataFrame({'DateTime': pd.to_datetime(dates), 'Value': values})
+        return df.sort_values('DateTime').set_index('DateTime').resample('D').mean().dropna()
 
-        graphs = zapi.graph.get(output=['graphid', 'name'], hostids=host_id)
+    def get_local_extrema(self, df):
+        """Obter os extremos locais de mínimo e máximo"""
+        min_loc = argrelextrema(df['Value'].values, np.less)[0]
+        max_loc = argrelextrema(df['Value'].values, np.greater)[0]
+        return min_loc, max_loc
 
-        graphs_relevant = list(filter(
-            lambda graph: 'CPU - utilização' in graph['name'] or 'memória' in graph['name'].lower(),
-            graphs
-        ))
+    def create_figure(self, df, min_loc, max_loc, host_name, item_type):
+        """Criar o gráfico com os dados e marcar os extremos locais"""
+        fig = go.Figure()
+        fig.update_layout(template="plotly_dark")
+        fig.add_trace(go.Scatter(x=df.index, y=df['Value'], mode='lines', name=host_name))
+        fig.add_trace(go.Scatter(x=df.index[min_loc], y=df['Value'].iloc[min_loc], mode='markers', marker=dict(color='green', size=8), name=f"{host_name} - Min Local"))
+        fig.add_trace(go.Scatter(x=df.index[max_loc], y=df['Value'].iloc[max_loc], mode='markers', marker=dict(color='red', size=8), name=f"{host_name} - Max Local"))
+        return fig
 
-        if not graphs_relevant:
-            logging.error("Nenhum gráfico relevante encontrado para o host especificado.")
-            return
+    def save_graph(self, fig, item_type):
+        """Salvar o gráfico gerado como imagem"""
+        os.makedirs("output/images", exist_ok=True)
+        img_name = "grafico_cpu.jpeg" if "CPU" in item_type else "grafico_memoria.jpeg"
+        fig.write_image(os.path.join("output/images", img_name), format='jpeg')
+        logging.info(f"Graph saved as {img_name}")
 
-        session = requests.Session()
-        session.post(f"{zabbix_url}/index.php", data={'name': zabbix_user, 'password': zabbix_password, 'enter': 'Sign in'})
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-        stime, etime = get_three_months_period()
+def fetch_and_generate_graph(zabbix_api, host_name, items, item_type, time_from, time_till):
+    """Buscar dados históricos e gerar gráfico em paralelo"""
+    itemid = items.get(item_type)
+    if itemid:
+        history_data = zabbix_api.get_history(itemid, time_from, time_till, 3)  
+        if history_data:
+            graph_generator = GraphGenerator(zabbix_api)
+            graph_generator.generate_graph(host_name, item_type, history_data)
 
-        graph_paths = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [
-                executor.submit(download_graph_zabbix_via_http, session, graph['graphid'], graph['name'], host_name, stime, etime)
-                for graph in graphs_relevant
-            ]
-            for future in futures:
-                result = future.result()
-                if result:
-                    graph_paths.append(result)
 
-        if not graph_paths:
-            logging.error("Falha ao baixar gráficos.")
-            return
+def get_time_range():
+    """Obter o intervalo de tempo para a consulta de dados históricos"""
+    today = pd.Timestamp.today()
+    first_day_last_month = (today.replace(day=1) - pd.Timedelta(days=1)).replace(day=1)
+    time_from = int(first_day_last_month.timestamp())
+    time_till = int(time.time())
+    return time_from, time_till
 
-        logging.info(f"Gráficos baixados com sucesso: {graph_paths}")
 
-    except Exception as e:
-        logging.error(f"Erro ao processar gráficos: {e}")
+def main():
+    """Função principal para conectar à API Zabbix e gerar gráficos"""
+    zabbix_api = ZabbixAPI(zabbix_url, zabbix_user, zabbix_pass, zabbix_auth) 
+    zabbix_api.connect()
 
-app = Flask(__name__)
+    host_id = load_host_id()
+    if not host_id:
+        logging.error("Host ID not found in JSON file.")
+        return
 
-@app.route('/baixar_graficos', methods=['GET'])
-def download_graphs():
-    try:
-        host_id = load_host_id_from_storage()
-        if not host_id:
-            return jsonify({"error": "HOST_ID não encontrado no armazenamento local."}), 400
+    host_info = zabbix_api.get_host_items(host_id)
+    time_from, time_till = get_time_range()
 
-        zapi = connect_zabbix()
-        host = zapi.host.get(hostids=host_id, output=['hostid', 'name'])
-        if not host:
-            return jsonify({"error": f"Nenhum host encontrado com o ID {host_id}."}), 404
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(fetch_and_generate_graph, zabbix_api, "HostName", host_info, item_type, time_from, time_till)
+            for item_type in ["CPU utilização", "Memória usada em %"] if item_type in host_info
+        ]
+        for future in futures:
+            future.result()
 
-        host_name = host[0]['name']
-        logging.info(f"Host identificado: {host_name}")
-
-        graphs = zapi.graph.get(output=['graphid', 'name'], hostids=host_id)
-
-        graphs_relevant = list(filter(
-            lambda graph: 'CPU - utilização' in graph['name'] or 'memória' in graph['name'].lower(),
-            graphs
-        ))
-
-        if not graphs_relevant:
-            return jsonify({"error": "Nenhum gráfico relevante encontrado para o host especificado."}), 404
-
-        session = requests.Session()
-        session.post(f"{zabbix_url}/index.php", data={'name': zabbix_user, 'password': zabbix_password, 'enter': 'Sign in'})
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
-
-        stime, etime = get_three_months_period()
-
-        graph_paths = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [
-                executor.submit(download_graph_zabbix_via_http, session, graph['graphid'], graph['name'], host_name, stime, etime)
-                for graph in graphs_relevant
-            ]
-            for future in futures:
-                result = future.result()
-                if result:
-                    graph_paths.append(result)
-
-        if not graph_paths:
-            return jsonify({"error": "Falha ao baixar gráficos."}), 500
-
-        return jsonify({"message": "Gráficos baixados com sucesso.", "files": graph_paths}), 200
-
-    except Exception as e:
-        logging.error(f"Erro ao processar gráficos: {e}")
-        return jsonify({"error": "Erro ao processar gráficos."}), 500
 
 if __name__ == '__main__':
-    download_graphs_automatically()
+    main() 
