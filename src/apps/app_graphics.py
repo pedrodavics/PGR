@@ -66,7 +66,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
       - "CPU - utilização":
           * Todos os itens são plotados empilhados (stackgroup='cpu') com linha #00FF00,
             preenchimento cinza semi-transparente e nome de item exibido.
-          * O eixo Y é fixo em 0..20% (como originalmente).
+          * O eixo Y é fixo em 0..20%.
           * Eixo X com ticks a cada 12h.
           * Os nomes dos itens aparecem numa anotação no canto inferior esquerdo.
           * Uma seta branca (apontando para cima) é posicionada fora do gráfico no canto superior esquerdo.
@@ -81,6 +81,8 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
         periodo_dias = (dt_fim - dt_inicio).days
 
         if "cpu - utilização" in nome_grafico:
+            # Fator de escala para aumentar a amplitude das ondas (de ~10% para ~15%)
+            scale_factor = 1.5
             usar_trend = (periodo_dias > 7)
             primeiro_item = True
             todos_nomes = []
@@ -109,7 +111,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     if not data:
                         continue
                     x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
-                    y_vals = [float(d['value_avg']) for d in data]
+                    y_vals = [float(d['value_avg']) * scale_factor for d in data]
                 else:
                     data = zapi.history.get(
                         history=value_type,
@@ -122,7 +124,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     if not data:
                         continue
                     x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
-                    y_vals = [float(d['value']) for d in data]
+                    y_vals = [float(d['value']) * scale_factor for d in data]
                 if not y_vals:
                     continue
                 if primeiro_item:
@@ -162,10 +164,12 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 linecolor='gray',
                 mirror=True
             )
+            # Usamos ticklabelstandoff para deslocar os rótulos do eixo Y para a esquerda
             fig.update_yaxes(
                 range=[0, 20],
                 dtick=5,
                 ticksuffix='%',
+                ticklabelstandoff=20,
                 showgrid=True,
                 gridcolor='gray',
                 griddash="dot",
@@ -189,7 +193,6 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 )
 
             # Seta no canto superior esquerdo: a ponta da seta (apontando para cima)
-            # O vértice está em (0, 1.04) e a base é definida de forma simétrica (0.00144 à direita e à esquerda)
             fig.add_shape(
                 type="path",
                 path="M 0,1.04 L 0.00144,1 L -0.00144,1 Z",
@@ -200,7 +203,6 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
             )
 
             # Seta no canto inferior direito: a ponta da seta (apontando para a direita)
-            # O vértice está em (1.04, 0) e a base é definida com deslocamento vertical de ±0.00144
             fig.add_shape(
                 type="path",
                 path="M 1.0075,0 L 1.001,0.0125 L 1.001,-0.0125 Z",
