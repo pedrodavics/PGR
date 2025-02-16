@@ -2,12 +2,11 @@ import os
 import json
 import logging
 import requests
-import time
 from pyzabbix import ZabbixAPI
 from dotenv import load_dotenv
 from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import plotly.graph_objects as go
 
 # Carrega as variáveis de ambiente
 load_dotenv(dotenv_path='/home/tauge/Documents/tauge/PGR/.env')
@@ -36,144 +35,150 @@ def obter_hostid_do_json():
         raise
 
 def validar_url_zabbix():
-    """Garante que a URL do Zabbix está correta"""
     parsed = urlparse(ZABBIX_URL)
     if not parsed.path.endswith('/api_jsonrpc.php'):
         new_path = parsed.path.rstrip('/') + '/api_jsonrpc.php'
         return parsed._replace(path=new_path).geturl()
     return ZABBIX_URL
 
-def criar_sessao_web():
-    """Cria sessão autenticada via login web"""
-    try:
-        session = requests.Session()
-        login_url = ZABBIX_URL.replace('api_jsonrpc.php', 'index.php')
-        
-        # Dados de login
-        login_data = {
-            'name': ZABBIX_USER,
-            'password': ZABBIX_PASSWORD,
-            'enter': 'Sign in'
-        }
-        
-        # Headers para simular navegador
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-            'Referer': login_url
-        })
-        
-        # Faz login
-        response = session.post(login_url, data=login_data, verify=False)
-        response.raise_for_status()
-        
-        if 'sign in' in response.text.lower():
-            raise Exception("Falha na autenticação web")
-            
-        return session
-    except Exception as e:
-        logging.error(f"Erro de autenticação web: {str(e)}")
-        raise
-
 def get_periodo_30_dias():
-    """Retorna período de 30 dias em timestamps UNIX"""
-    hoje = datetime.now()
+    hoje = datetime.now(timezone.utc)
     inicio = hoje - timedelta(days=30)
-    return (
-        int(inicio.timestamp()),
-        int(hoje.timestamp())
-    )
+    return inicio, hoje
 
-def download_grafico(session, graphid, graph_name):
-    """Baixa um gráfico específico usando sessão web"""
+def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
     try:
-        stime, etime = get_periodo_30_dias()
-        chart_url = ZABBIX_URL.replace('api_jsonrpc.php', 'chart2.php')
-        
-        params = {
-            'graphid': graphid,
-            'stime': stime,
-            'etime': etime,
-            'width': 1200,
-            'height': 300
-        }
-        
-        response = session.get(
-            chart_url,
-            params=params,
-            stream=True,
-            verify=False
+        fig = go.Figure()
+        # Verifica se o gráfico possui os itens associados (gitems)
+        if 'gitems' not in graph:
+            logging.error(f"Gráfico '{graph['name']}' não possui itens associados (gitems).")
+            return
+
+        # Para cada item do gráfico, coleta os dados do período
+        for item in graph['gitems']:
+            itemid = item.get('itemid')
+            if not itemid:
+                continue
+
+            # Recupera detalhes do item
+            item_details = zapi.item.get(
+                itemids=itemid,
+                output=["name", "value_type"]
+            )
+            if not item_details:
+                logging.error(f"Item {itemid} não encontrado para o gráfico '{graph['name']}'.")
+                continue
+
+            item_detail = item_details[0]
+            value_type = int(item_detail.get('value_type'))
+            item_name = item_detail.get('name')
+
+            # Define o tipo de histórico a ser consultado com base no value_type (0 = float, 3 = unsigned)
+            history_type = value_type
+
+            # Se o período for maior que 7 dias, utiliza trend (dados agregados) em vez de history
+            periodo_dias = (dt_fim - dt_inicio).days
+            if periodo_dias > 7:
+                # Coleta dados de trends utilizando o método correto "trend.get"
+                data = zapi.trend.get(
+                    itemids=itemid,
+                    time_from=int(dt_inicio.timestamp()),
+                    time_till=int(dt_fim.timestamp()),
+                    output="extend",
+                    sortfield="clock",
+                    sortorder="ASC"
+                )
+                if not data:
+                    logging.warning(f"Sem dados de trend para o item '{item_name}' no gráfico '{graph['name']}'.")
+                    continue
+                x_vals = [datetime.fromtimestamp(int(point['clock']), tz=timezone.utc) for point in data]
+                y_vals = [float(point['value_avg']) for point in data]
+                logging.info(f"Dados de trend coletados para o item '{item_name}' do gráfico '{graph['name']}' com {len(x_vals)} pontos.")
+            else:
+                # Coleta dados históricos (history)
+                data = zapi.history.get(
+                    history=history_type,
+                    itemids=itemid,
+                    time_from=int(dt_inicio.timestamp()),
+                    time_till=int(dt_fim.timestamp()),
+                    sortfield="clock",
+                    sortorder="ASC"
+                )
+                if not data:
+                    logging.warning(f"Sem dados de history para o item '{item_name}' no gráfico '{graph['name']}'.")
+                    continue
+                x_vals = [datetime.fromtimestamp(int(point['clock']), tz=timezone.utc) for point in data]
+                y_vals = [float(point['value']) for point in data]
+                logging.info(f"Dados de history coletados para o item '{item_name}' do gráfico '{graph['name']}' com {len(x_vals)} pontos.")
+
+            # Configura a cor do item (assegurando que esteja no formato hexadecimal)
+            color = item.get('color', 'FFFFFF')
+            if not color.startswith('#'):
+                color = '#' + color
+
+            fig.add_trace(go.Scatter(
+                x=x_vals,
+                y=y_vals,
+                mode='lines',
+                name=item_name,
+                line=dict(color=color)
+            ))
+
+        # Configuração do layout para deixar o fundo preto, similar ao Zabbix
+        fig.update_layout(
+            title=graph['name'],
+            paper_bgcolor='black',
+            plot_bgcolor='black',
+            font=dict(color='white'),
+            xaxis=dict(title='Tempo', gridcolor='gray'),
+            yaxis=dict(title='Valor', gridcolor='gray'),
+            legend=dict(font=dict(color='white'))
         )
-        
-        if response.status_code != 200:
-            raise Exception(f"HTTP {response.status_code}: {response.text[:200]}...")
-            
-        if 'image/png' not in response.headers.get('Content-Type', ''):
-            raise Exception("Resposta não é uma imagem PNG")
-        
-        # Cria nome seguro para o arquivo
-        safe_name = "".join([c if c.isalnum() else "_" for c in graph_name])
-        file_path = os.path.join(OUTPUT_DIR, f"{safe_name}.png")
-        
-        # Salva o arquivo
+
+        # Salva o gráfico gerado pelo Plotly como PNG
+        safe_name = "".join([c if c.isalnum() else "_" for c in graph['name']])
+        file_path = os.path.join(OUTPUT_DIR, f"{safe_name}_plotly.png")
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        with open(file_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
-        
-        logging.info(f"Gráfico salvo: {file_path}")
-        return file_path
-        
+        fig.write_image(file_path)
+        logging.info(f"Gráfico Plotly salvo: {file_path}")
+
     except Exception as e:
-        logging.error(f"Falha no download de {graph_name}: {str(e)}")
-        return None
+        logging.error(f"Falha ao gerar gráfico Plotly para '{graph['name']}': {str(e)}")
 
 def processar_graficos():
     try:
+        # Autentica na API do Zabbix
         zapi = ZabbixAPI(validar_url_zabbix())
         zapi.login(ZABBIX_USER, ZABBIX_PASSWORD)
-        logging.info("Autenticação API realizada com sucesso")
+        logging.info("Autenticação API realizada com sucesso.")
 
         hostid = obter_hostid_do_json()
         
-        # Obtém gráficos disponíveis
+        # Obtém os gráficos do host, incluindo os itens associados (gitems)
         graphs = zapi.graph.get(
             hostids=hostid,
-            output=["name", "graphid"]
+            output=["name", "graphid"],
+            selectGraphItems="extend"
         )
         
-        # Filtra gráficos relevantes
+        # Filtra os gráficos relevantes (por exemplo, CPU e memória)
         graphs_relevantes = [
             g for g in graphs 
-            if any(kw in g['name'] for kw in ['CPU', 'memória', 'RAM'])
+            if any(kw in g['name'] for kw in ['CPU - utilização', 'memória'])
         ]
         
         if not graphs_relevantes:
-            logging.error("Nenhum gráfico relevante encontrado")
+            logging.error("Nenhum gráfico relevante encontrado.")
             return
 
-        # Cria sessão web separada
-        web_session = criar_sessao_web()
-        
-        # Processamento paralelo
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [
-                executor.submit(
-                    download_grafico,
-                    web_session,
-                    graph['graphid'],
-                    graph['name']
-                )
-                for graph in graphs_relevantes
-            ]
-            
-            resultados = [
-                future.result()
-                for future in futures
-                if future.result() is not None
-            ]
-            
-        logging.info(f"Total de gráficos baixados: {len(resultados)}")
+        # Define o período de 30 dias (início alinhado ao começo do dia UTC)
+        dt_fim = datetime.now(timezone.utc)
+        dt_inicio = dt_fim - timedelta(days=30)
+        dt_inicio = dt_inicio.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Gera o gráfico para cada gráfico relevante usando Plotly
+        for graph in graphs_relevantes:
+            generate_plotly_graph(zapi, graph, dt_inicio, dt_fim)
 
     except Exception as e:
         logging.error(f"Erro crítico: {str(e)}")
