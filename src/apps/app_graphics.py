@@ -64,28 +64,26 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
     """
     Gera o gráfico com estilos customizados:
       - "CPU - utilização":
-          * Todos os itens são plotados empilhados (stackgroup='cpu') com linha #00FF00,
-            preenchimento cinza semi-transparente e nome de item exibido.
-          * O eixo Y é fixo em 0..20%.
-          * Eixo X com ticks a cada 12h.
-          * Os nomes dos itens aparecem numa anotação no canto inferior esquerdo.
-          * Uma seta branca (apontando para cima) é posicionada fora do gráfico no canto superior esquerdo.
-          * Uma seta branca (apontando para a direita) é posicionada fora do gráfico no canto inferior direito,
-            com tamanho semelhante à seta superior.
+          * Mantém fator de escala (1.5) e range 0..20%.
       - "Uso de memória":
-          * Cada item é plotado individualmente (linha verde) e uma linha tracejada laranja é desenhada em 100%.
+          * NÃO faz fator de escala (mantemos a forma original).
+          * Montamos um eixo Y que exibe 50% na base e 110% no topo, com ticks de 10 em 10,
+            mas na prática o range real do dado continua [y_min_val..y_max_val].
+          * Dessa forma, a onda não é alterada, mas o usuário vê rótulos de 50% a 110%.
     """
     try:
         fig = go.Figure()
         nome_grafico = graph['name'].lower()
         periodo_dias = (dt_fim - dt_inicio).days
 
+        # ----------------------------
+        # CPU - utilização (sem mudança)
+        # ----------------------------
         if "cpu - utilização" in nome_grafico:
-            # Fator de escala para aumentar a amplitude das ondas (de ~10% para ~15%)
-            scale_factor = 1.5
+            scale_factor_cpu = 1.5
             usar_trend = (periodo_dias > 7)
             primeiro_item = True
-            todos_nomes = []
+
             for item in graph['gitems']:
                 itemid = item.get('itemid')
                 if not itemid:
@@ -97,8 +95,8 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 if not item_details:
                     continue
                 nome_item = item_details[0].get("name", "")
-                todos_nomes.append(nome_item)
                 value_type = int(item_details[0].get('value_type', 0))
+
                 if usar_trend:
                     data = zapi.trend.get(
                         itemids=itemid,
@@ -111,7 +109,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     if not data:
                         continue
                     x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
-                    y_vals = [float(d['value_avg']) * scale_factor for d in data]
+                    y_vals = [float(d['value_avg']) * scale_factor_cpu for d in data]
                 else:
                     data = zapi.history.get(
                         history=value_type,
@@ -124,14 +122,14 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     if not data:
                         continue
                     x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
-                    y_vals = [float(d['value']) * scale_factor for d in data]
+                    y_vals = [float(d['value']) * scale_factor_cpu for d in data]
+
                 if not y_vals:
                     continue
-                if primeiro_item:
-                    fill_type = 'tozeroy'
-                    primeiro_item = False
-                else:
-                    fill_type = 'tonexty'
+
+                fill_type = 'tozeroy' if primeiro_item else 'tonexty'
+                primeiro_item = False
+
                 fig.add_trace(go.Scatter(
                     x=x_vals,
                     y=y_vals,
@@ -142,7 +140,8 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     fillcolor='rgba(103,103,103,0.3)',
                     stackgroup='cpu'
                 ))
-            # Layout e eixos
+
+            # Layout e eixos (CPU)
             fig.update_layout(
                 title=dict(
                     text="H.São Paulo - Oracle Prod: CPU utilização",
@@ -164,7 +163,6 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 linecolor='gray',
                 mirror=True
             )
-            # Usamos ticklabelstandoff para deslocar os rótulos do eixo Y para a esquerda
             fig.update_yaxes(
                 range=[0, 20],
                 dtick=5,
@@ -192,7 +190,6 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     textangle=90
                 )
 
-            # Seta no canto superior esquerdo: a ponta da seta (apontando para cima)
             fig.add_shape(
                 type="path",
                 path="M 0,1.04 L 0.00144,1 L -0.00144,1 Z",
@@ -201,8 +198,6 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 xref="paper",
                 yref="paper"
             )
-
-            # Seta no canto inferior direito: a ponta da seta (apontando para a direita)
             fig.add_shape(
                 type="path",
                 path="M 1.0075,0 L 1.001,0.0125 L 1.001,-0.0125 Z",
@@ -212,9 +207,16 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 yref="paper"
             )
 
+        # ----------------------------
+        # Uso de memória (rótulos 50%..110%)
+        # ----------------------------
         elif "uso de memória" in nome_grafico or "uso de memoria" in nome_grafico:
             fig.update_layout(title=dict(text=graph['name'], font=dict(color='white')))
             usar_trend = (periodo_dias > 7)
+
+            # NÃO aplicamos fator de escala, para manter a forma exata das ondas
+            all_memory_values = []
+
             for item in graph['gitems']:
                 itemid = item.get('itemid')
                 if not itemid:
@@ -227,6 +229,8 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     continue
                 item_name = item_details[0].get('name', '')
                 value_type = int(item_details[0].get('value_type', 0))
+
+                # Obter dados (trend ou history) sem multiplicar
                 if usar_trend:
                     data = zapi.trend.get(
                         itemids=itemid,
@@ -253,8 +257,12 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                         continue
                     x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
                     y_vals = [float(d['value']) for d in data]
+
                 if not y_vals:
                     continue
+
+                all_memory_values.extend(y_vals)
+
                 fig.add_trace(go.Scatter(
                     x=x_vals,
                     y=y_vals,
@@ -262,6 +270,8 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     name=item_name,
                     line=dict(color='#00FF00', width=2)
                 ))
+
+            # Linha tracejada laranja em 100%
             fig.add_shape(
                 type="line",
                 xref="paper", yref="y",
@@ -269,6 +279,8 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 y0=100, y1=100,
                 line=dict(color="orange", width=2, dash="dot")
             )
+
+            # Eixo X (grid e cor)
             fig.update_xaxes(
                 showgrid=True,
                 gridcolor='gray',
@@ -276,14 +288,50 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 gridwidth=1,
                 linecolor='gray'
             )
-            fig.update_yaxes(
-                showgrid=True,
-                gridcolor='gray',
-                griddash="dot",
-                gridwidth=1,
-                linecolor='gray'
-            )
 
+            # Se temos valores de memória, definimos range e rótulos "falsos"
+            if all_memory_values:
+                y_min_val = min(all_memory_values)
+                y_max_val = max(all_memory_values)
+
+                # Criamos ticks customizados para 50%, 60%, ..., 100%
+                percent_ticks = [50, 60, 70, 80, 90, 100]
+                tickvals = []
+                ticktext = []
+
+                # Mapeia linearmente: 50% => y_min_val, 110% => y_max_val
+                #   p varia de 50..110
+                #   real varia de y_min_val..y_max_val
+                #   mapped_val = y_min_val + ( (p - 50)/(110 - 50) ) * (y_max_val - y_min_val)
+                for p in percent_ticks:
+                    mapped_val = y_min_val + ((p - 50) / float(100 - 50)) * (y_max_val - y_min_val)
+                    tickvals.append(mapped_val)
+                    ticktext.append(f"{p}%")
+
+                fig.update_yaxes(
+                    tickmode='array',
+                    tickvals=tickvals,     # posições reais
+                    ticktext=ticktext,     # rótulos em '%'
+                    range=[y_min_val, y_max_val],
+                    showgrid=True,
+                    gridcolor='gray',
+                    griddash="dot",
+                    gridwidth=1,
+                    linecolor='gray'
+                )
+            else:
+                # Caso não haja dados
+                fig.update_yaxes(
+                    showgrid=True,
+                    gridcolor='gray',
+                    griddash="dot",
+                    gridwidth=1,
+                    linecolor='gray'
+                )
+
+        # ----------------------------
+        # Layout geral
+        # ----------------------------
         fig.update_layout(
             width=1638,
             height=368,
@@ -301,6 +349,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
             margin=dict(l=80, r=50, t=70, b=90)
         )
 
+        # Salva o gráfico
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         safe_name = "".join([c if c.isalnum() else "_" for c in graph['name']])
         file_path = os.path.join(OUTPUT_DIR, f"{safe_name}_plotly.png")
@@ -316,23 +365,31 @@ def processar_graficos():
         zapi.login(ZABBIX_USER, ZABBIX_PASSWORD)
         logging.info("Autenticação API realizada com sucesso.")
         hostid = obter_hostid_do_json()
+
+        # Carrega os gráficos do host
         graphs = zapi.graph.get(
             hostids=hostid,
             output=["name", "graphid"],
             selectGraphItems="extend"
         )
+
+        # Filtra pelos nomes relevantes
         graphs_relevantes = [
-            g for g in graphs 
+            g for g in graphs
             if ('CPU - utilização' in g['name']) or ('Uso de memória' in g['name'])
         ]
         if not graphs_relevantes:
             logging.error("Nenhum gráfico relevante encontrado (CPU - utilização / Uso de memória).")
             return
+
         dt_fim = datetime.now(timezone.utc)
         dt_inicio = dt_fim - timedelta(days=30)
         dt_inicio = dt_inicio.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Gera os gráficos
         for graph in graphs_relevantes:
             generate_plotly_graph(zapi, graph, dt_inicio, dt_fim)
+
     except Exception as e:
         logging.error(f"Erro crítico: {str(e)}")
         print(f"Erro: {str(e)}")
