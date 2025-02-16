@@ -41,45 +41,60 @@ def validar_url_zabbix():
         return parsed._replace(path=new_path).geturl()
     return ZABBIX_URL
 
-def get_periodo_30_dias():
-    hoje = datetime.now(timezone.utc)
-    inicio = hoje - timedelta(days=30)
-    return inicio, hoje
+def criar_ticks_personalizados(dt_inicio, dt_fim):
+    """
+    Cria ticks a cada 12h para o eixo X.
+    Se for meia-noite, formata como 'MM-DD';
+    Caso contrário, formata como 'hh:mm AM/PM'.
+    """
+    tick_times = []
+    tick_labels = []
+    atual = dt_inicio
+    while atual <= dt_fim:
+        tick_times.append(atual)
+        if atual.hour == 0:
+            label = atual.strftime('%m-%d')
+        else:
+            label = atual.strftime('%I:%M %p')
+        tick_labels.append(label)
+        atual += timedelta(hours=12)
+    return tick_times, tick_labels
 
 def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
+    """
+    Gera o gráfico com estilo diferenciado para:
+      - "CPU - utilização": área fill com opacidade baixa, eixos customizados, fundo da imagem cinza,
+        grid pontilhado e ticks a cada 12h.
+      - "Uso de memória": linha verde sem fill e linha tracejada laranja em 100%.
+    """
     try:
         fig = go.Figure()
-        # Verifica se o gráfico possui os itens associados (gitems)
+
         if 'gitems' not in graph:
             logging.error(f"Gráfico '{graph['name']}' não possui itens associados (gitems).")
             return
 
-        # Para cada item do gráfico, coleta os dados do período
+        nome_grafico = graph['name'].lower()
+        periodo_dias = (dt_fim - dt_inicio).days
+
         for item in graph['gitems']:
             itemid = item.get('itemid')
             if not itemid:
                 continue
 
-            # Recupera detalhes do item
             item_details = zapi.item.get(
                 itemids=itemid,
                 output=["name", "value_type"]
             )
             if not item_details:
-                logging.error(f"Item {itemid} não encontrado para o gráfico '{graph['name']}'.")
+                logging.error(f"Item {itemid} não encontrado em '{graph['name']}'.")
                 continue
 
             item_detail = item_details[0]
-            value_type = int(item_detail.get('value_type'))
             item_name = item_detail.get('name')
+            value_type = int(item_detail.get('value_type'))
 
-            # Define o tipo de histórico a ser consultado com base no value_type (0 = float, 3 = unsigned)
-            history_type = value_type
-
-            # Se o período for maior que 7 dias, utiliza trend (dados agregados) em vez de history
-            periodo_dias = (dt_fim - dt_inicio).days
             if periodo_dias > 7:
-                # Coleta dados de trends utilizando o método correto "trend.get"
                 data = zapi.trend.get(
                     itemids=itemid,
                     time_from=int(dt_inicio.timestamp()),
@@ -89,15 +104,13 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     sortorder="ASC"
                 )
                 if not data:
-                    logging.warning(f"Sem dados de trend para o item '{item_name}' no gráfico '{graph['name']}'.")
+                    logging.warning(f"Sem dados de trend para '{item_name}' em '{graph['name']}'.")
                     continue
-                x_vals = [datetime.fromtimestamp(int(point['clock']), tz=timezone.utc) for point in data]
-                y_vals = [float(point['value_avg']) for point in data]
-                logging.info(f"Dados de trend coletados para o item '{item_name}' do gráfico '{graph['name']}' com {len(x_vals)} pontos.")
+                x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
+                y_vals = [float(d['value_avg']) for d in data]
             else:
-                # Coleta dados históricos (history)
                 data = zapi.history.get(
-                    history=history_type,
+                    history=value_type,
                     itemids=itemid,
                     time_from=int(dt_inicio.timestamp()),
                     time_till=int(dt_fim.timestamp()),
@@ -105,40 +118,115 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     sortorder="ASC"
                 )
                 if not data:
-                    logging.warning(f"Sem dados de history para o item '{item_name}' no gráfico '{graph['name']}'.")
+                    logging.warning(f"Sem dados de history para '{item_name}' em '{graph['name']}'.")
                     continue
-                x_vals = [datetime.fromtimestamp(int(point['clock']), tz=timezone.utc) for point in data]
-                y_vals = [float(point['value']) for point in data]
-                logging.info(f"Dados de history coletados para o item '{item_name}' do gráfico '{graph['name']}' com {len(x_vals)} pontos.")
+                x_vals = [datetime.fromtimestamp(int(d['clock']), tz=timezone.utc) for d in data]
+                y_vals = [float(d['value']) for d in data]
 
-            # Configura a cor do item (assegurando que esteja no formato hexadecimal)
-            color = item.get('color', 'FFFFFF')
-            if not color.startswith('#'):
-                color = '#' + color
+            if not y_vals:
+                continue
 
-            fig.add_trace(go.Scatter(
-                x=x_vals,
-                y=y_vals,
-                mode='lines',
-                name=item_name,
-                line=dict(color=color)
-            ))
+            # Para CPU - utilização, aplica área fill com baixa opacidade
+            if "cpu - utilização" in nome_grafico:
+                fig.add_trace(go.Scatter(
+                    x=x_vals,
+                    y=y_vals,
+                    mode='lines',
+                    name=item_name,
+                    line=dict(color='#00FF00', width=1),
+                    fill='tozeroy',
+                    fillcolor='rgba(0,255,0,0.2)'
+                ))
+            # Para Uso de memória, mantém linha verde sem fill
+            elif "uso de memória" in nome_grafico or "uso de memoria" in nome_grafico:
+                fig.add_trace(go.Scatter(
+                    x=x_vals,
+                    y=y_vals,
+                    mode='lines',
+                    name=item_name,
+                    line=dict(color='#00FF00', width=2)
+                ))
 
-        # Configuração do layout para deixar o fundo preto, similar ao Zabbix
+        # Estilos e configurações específicas para CPU - utilização
+        if "cpu - utilização" in nome_grafico:
+            fig.update_layout(
+                title=dict(
+                    text="H.São Paulo - Oracle Prod: CPU utilização",
+                    x=0.5,
+                    y=0.93
+                )
+            )
+            tick_times, tick_labels = criar_ticks_personalizados(dt_inicio, dt_fim)
+            fig.update_xaxes(
+                tickmode='array',
+                tickvals=tick_times,
+                ticktext=tick_labels,
+                range=[dt_inicio, dt_fim],
+                showgrid=True,
+                gridcolor='gray',
+                griddash="dot",
+                gridwidth=1,
+                linecolor='gray',
+                mirror=True
+            )
+            fig.update_yaxes(
+                range=[0, 20],
+                dtick=5,
+                ticksuffix='%',
+                showgrid=True,
+                gridcolor='gray',
+                griddash="dot",
+                gridwidth=1,
+                linecolor='gray',
+                mirror=True
+            )
+        # Configurações para Uso de memória
+        elif "uso de memória" in nome_grafico or "uso de memoria" in nome_grafico:
+            fig.update_layout(title=graph['name'])
+            fig.add_shape(
+                type="line",
+                xref="paper", yref="y",
+                x0=0, x1=1,
+                y0=100, y1=100,
+                line=dict(color="orange", width=2, dash="dot")
+            )
+            fig.update_xaxes(
+                showgrid=True,
+                gridcolor='gray',
+                griddash="dot",
+                gridwidth=1,
+                linecolor='gray'
+            )
+            fig.update_yaxes(
+                showgrid=True,
+                gridcolor='gray',
+                griddash="dot",
+                gridwidth=1,
+                linecolor='gray'
+            )
+
+        # Define dimensões e fundo geral (imagem cinza)
         fig.update_layout(
-            title=graph['name'],
-            paper_bgcolor='black',
-            plot_bgcolor='black',
+            width=1980,
+            height=720,
+            paper_bgcolor='gray',
+            plot_bgcolor='gray',
             font=dict(color='white'),
-            xaxis=dict(title='Tempo', gridcolor='gray'),
-            yaxis=dict(title='Valor', gridcolor='gray'),
-            legend=dict(font=dict(color='white'))
+            legend=dict(
+                font=dict(color='white'),
+                orientation='h',
+                x=0,
+                y=1.05
+            ),
+            margin=dict(l=80, r=50, t=70, b=50)
         )
 
-        # Salva o gráfico gerado pelo Plotly como PNG
+        # Removemos qualquer anotação extra que possa interferir
+        # (não adicionamos nenhuma annotation com métricas)
+
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
         safe_name = "".join([c if c.isalnum() else "_" for c in graph['name']])
         file_path = os.path.join(OUTPUT_DIR, f"{safe_name}_plotly.png")
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
         fig.write_image(file_path)
         logging.info(f"Gráfico Plotly salvo: {file_path}")
 
@@ -147,36 +235,32 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
 
 def processar_graficos():
     try:
-        # Autentica na API do Zabbix
         zapi = ZabbixAPI(validar_url_zabbix())
         zapi.login(ZABBIX_USER, ZABBIX_PASSWORD)
         logging.info("Autenticação API realizada com sucesso.")
 
         hostid = obter_hostid_do_json()
-        
-        # Obtém os gráficos do host, incluindo os itens associados (gitems)
+
         graphs = zapi.graph.get(
             hostids=hostid,
             output=["name", "graphid"],
             selectGraphItems="extend"
         )
-        
-        # Filtra os gráficos relevantes (por exemplo, CPU e memória)
+
+        # Filtra somente os gráficos "CPU - utilização" e "Uso de memória"
         graphs_relevantes = [
             g for g in graphs 
-            if any(kw in g['name'] for kw in ['CPU - utilização', 'memória'])
+            if ('CPU - utilização' in g['name']) or ('Uso de memória' in g['name'])
         ]
-        
+
         if not graphs_relevantes:
-            logging.error("Nenhum gráfico relevante encontrado.")
+            logging.error("Nenhum gráfico relevante encontrado (CPU - utilização / Uso de memória).")
             return
 
-        # Define o período de 30 dias (início alinhado ao começo do dia UTC)
         dt_fim = datetime.now(timezone.utc)
         dt_inicio = dt_fim - timedelta(days=30)
         dt_inicio = dt_inicio.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Gera o gráfico para cada gráfico relevante usando Plotly
         for graph in graphs_relevantes:
             generate_plotly_graph(zapi, graph, dt_inicio, dt_fim)
 
