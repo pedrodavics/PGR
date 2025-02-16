@@ -190,6 +190,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                     textangle=90
                 )
 
+            # Setinhas do gráfico de CPU
             fig.add_shape(
                 type="path",
                 path="M 0,1.04 L 0.00144,1 L -0.00144,1 Z",
@@ -208,13 +209,11 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
             )
 
         # ----------------------------
-        # Uso de memória (rótulos 50%..110%)
+        # Uso de memória (modificado)
         # ----------------------------
         elif "uso de memória" in nome_grafico or "uso de memoria" in nome_grafico:
-            fig.update_layout(title=dict(text=graph['name'], font=dict(color='white')))
             usar_trend = (periodo_dias > 7)
-
-            # NÃO aplicamos fator de escala, para manter a forma exata das ondas
+            primeiro_item_mem = True
             all_memory_values = []
 
             for item in graph['gitems']:
@@ -230,7 +229,7 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 item_name = item_details[0].get('name', '')
                 value_type = int(item_details[0].get('value_type', 0))
 
-                # Obter dados (trend ou history) sem multiplicar
+                # Obter dados (trend ou history)
                 if usar_trend:
                     data = zapi.trend.get(
                         itemids=itemid,
@@ -263,12 +262,18 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
 
                 all_memory_values.extend(y_vals)
 
+                fill_type = 'tozeroy' if primeiro_item_mem else 'tonexty'
+                primeiro_item_mem = False
+
                 fig.add_trace(go.Scatter(
                     x=x_vals,
                     y=y_vals,
                     mode='lines',
                     name=item_name,
-                    line=dict(color='#00FF00', width=2)
+                    line=dict(color='#00FF00', width=1),
+                    fill=fill_type,
+                    fillcolor='rgba(103,103,103,0.3)',
+                    stackgroup='memory'
                 ))
 
             # Linha tracejada laranja em 100%
@@ -280,53 +285,97 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
                 line=dict(color="orange", width=2, dash="dot")
             )
 
-            # Eixo X (grid e cor)
+            # Layout e eixos (Memória)
+            fig.update_layout(
+                title=dict(
+                    text="H.São Paulo - Oracle Prod: Memória usada em %",
+                    x=0.5,
+                    y=0.93,
+                    font=dict(color='white')
+                )
+            )
+
+            # Configuração do eixo X igual ao da CPU
+            tick_times, tick_labels = criar_ticks_personalizados(dt_inicio, dt_fim)
             fig.update_xaxes(
+                tickmode='array',
+                tickvals=tick_times,
+                ticktext=[""] * len(tick_times),
+                range=[dt_inicio, dt_fim],
                 showgrid=True,
                 gridcolor='gray',
                 griddash="dot",
                 gridwidth=1,
-                linecolor='gray'
+                linecolor='gray',
+                mirror=True
             )
 
-            # Se temos valores de memória, definimos range e rótulos "falsos"
+            # Adicionar labels personalizadas no eixo X
+            for t, label in zip(tick_times, tick_labels):
+                cor = "#a64949" if (t.hour == 0) else "white"
+                fig.add_annotation(
+                    x=t,
+                    y=-0.07,
+                    xref="x",
+                    yref="paper",
+                    text=label,
+                    showarrow=False,
+                    font=dict(color=cor, size=10),
+                    xanchor="center",
+                    yanchor="top",
+                    textangle=90
+                )
+
+            # Adicionar as setinhas (shapes) iguais às do gráfico de CPU
+            fig.add_shape(
+                type="path",
+                path="M 0,1.04 L 0.00144,1 L -0.00144,1 Z",
+                fillcolor="white",
+                line=dict(width=0),
+                xref="paper",
+                yref="paper"
+            )
+            fig.add_shape(
+                type="path",
+                path="M 1.0075,0 L 1.001,0.0125 L 1.001,-0.0125 Z",
+                fillcolor="white",
+                line=dict(width=0),
+                xref="paper",
+                yref="paper"
+            )
+
+            # Configuração do eixo Y (rótulos 50%..110%)
             if all_memory_values:
                 y_min_val = min(all_memory_values)
                 y_max_val = max(all_memory_values)
-
-                # Criamos ticks customizados para 50%, 60%, ..., 100%
                 percent_ticks = [50, 60, 70, 80, 90, 100]
                 tickvals = []
                 ticktext = []
-
-                # Mapeia linearmente: 50% => y_min_val, 110% => y_max_val
-                #   p varia de 50..110
-                #   real varia de y_min_val..y_max_val
-                #   mapped_val = y_min_val + ( (p - 50)/(110 - 50) ) * (y_max_val - y_min_val)
                 for p in percent_ticks:
-                    mapped_val = y_min_val + ((p - 50) / float(100 - 50)) * (y_max_val - y_min_val)
+                    mapped_val = y_min_val + ((p - 50) / 50) * (y_max_val - y_min_val)
                     tickvals.append(mapped_val)
                     ticktext.append(f"{p}%")
-
+                
                 fig.update_yaxes(
                     tickmode='array',
-                    tickvals=tickvals,     # posições reais
-                    ticktext=ticktext,     # rótulos em '%'
+                    tickvals=tickvals,
+                    ticktext=ticktext,
                     range=[y_min_val, y_max_val],
                     showgrid=True,
                     gridcolor='gray',
                     griddash="dot",
                     gridwidth=1,
-                    linecolor='gray'
+                    linecolor='gray',
+                    mirror=True
                 )
             else:
-                # Caso não haja dados
                 fig.update_yaxes(
                     showgrid=True,
                     gridcolor='gray',
                     griddash="dot",
                     gridwidth=1,
-                    linecolor='gray'
+                    linecolor='gray',
+                    mirror=True
                 )
 
         # ----------------------------
