@@ -53,7 +53,7 @@ SELECT
   TO_CHAR(j.start_time, 'yyyy-mm-dd hh24:mi:ss') AS start_time,
   TO_CHAR(j.end_time, 'yyyy-mm-dd hh24:mi:ss') AS end_time,
   (j.output_bytes/1024/1024) AS output_mbytes,
-  j.status, 
+-- j.status, 
   j.input_type,
   DECODE(TO_CHAR(j.start_time, 'd'), 
          1, 'Sunday', 
@@ -63,13 +63,13 @@ SELECT
          5, 'Thursday', 
          6, 'Friday', 
          7, 'Saturday') AS dow,
-  j.elapsed_seconds, 
-  j.time_taken_display,
-  x.cf, 
-  x.df, 
-  x.i0, 
-  x.i1, 
-  x.l,
+  j.elapsed_seconds 
+  -- j.time_taken_display,
+  -- x.cf, 
+  -- x.df, 
+  -- x.i0, 
+  -- x.i1, 
+  -- x.l,
   ro.inst_id AS output_instance
 FROM v$RMAN_BACKUP_JOB_DETAILS j
 LEFT OUTER JOIN 

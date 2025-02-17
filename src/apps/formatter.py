@@ -108,14 +108,21 @@ def obter_dados_do_banco():
     jdbc_url, jdbc_user, jdbc_password = carregar_configuracoes_do_storage()
     
     try:
-        conexao = jaydebeapi.connect('oracle.jdbc.driver.OracleDriver', jdbc_url, [jdbc_user, jdbc_password], jdbc_jar)
+        conexao = jaydebeapi.connect(
+            'oracle.jdbc.driver.OracleDriver',
+            jdbc_url,
+            [jdbc_user, jdbc_password],
+            jdbc_jar
+        )
 
         consultas = {
+            # Consulta para a versao do Oracle
             "versao_do_banco_de_dados": """
                 SELECT version 
                 FROM PRODUCT_COMPONENT_VERSION 
                 WHERE product LIKE 'Oracle Database%'
             """,
+            # Consulta para as 20 maiores tabelas
             "maiores_tabelas": """
                 SELECT * 
                 FROM 
@@ -126,6 +133,7 @@ def obter_dados_do_banco():
                      ORDER BY 3 DESC) 
                 WHERE rownum <= 20
             """,
+            # Consulta para top 10 queries mais lentas
             "top_sql": """
                 SELECT rownum AS rank, a.* 
                 FROM 
@@ -135,6 +143,7 @@ def obter_dados_do_banco():
                      ORDER BY elapsed_time DESC) a 
                 WHERE rownum < 11
             """,
+            # Consulta para detalhes de backup do RMAN
             "print_backup": """
                 SELECT
                     TO_CHAR(j.start_time, 'yyyy-mm-dd hh24:mi:ss') AS start_time,
@@ -150,14 +159,7 @@ def obter_dados_do_banco():
                            5, 'Thursday', 
                            6, 'Friday', 
                            7, 'Saturday') AS dow,
-                    j.elapsed_seconds, 
-                    j.time_taken_display,
-                    x.cf, 
-                    x.df, 
-                    x.i0, 
-                    x.i1, 
-                    x.l,
-                    ro.inst_id AS output_instance
+                    j.elapsed_seconds
                 FROM v$RMAN_BACKUP_JOB_DETAILS j
                 LEFT OUTER JOIN 
                     (SELECT 
@@ -216,14 +218,25 @@ def gerar_pdf(dados):
     info_servidor = obter_dados_do_servidor().get("Informações do Servidor Produtivo")
     dados["informacoes_servidor"] = info_servidor
 
+    # Inserir as imagens no contexto para o template
+    # Obs.: se possível, renomeie os arquivos para evitar acentos, por exemplo:
+    # 'CPU___utilizacao_plotly.png' e 'Uso_de_memoria_plotly.png'.
+    # Mas se for manter, certifique-se de que seu sistema suporte corretamente.
+    caminho_imagens = "/home/tauge/Documents/tauge/PGR/output/graphics"
+    dados["monitoramento_cpu"] = f"file://{os.path.join(caminho_imagens, 'CPU___utilizacao_plotly.png')}"
+    dados["monitoramento_memoria"] = f"file://{os.path.join(caminho_imagens, 'Uso_de_memoria_plotly.png')}"
+
     output_text = template.render(dados)
 
     config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
-    options = {"encoding": "UTF-8"}
+    # Habilitar acesso local para que as imagens sejam renderizadas
+    options = {
+        "encoding": "UTF-8",
+        "enable-local-file-access": None
+    }
 
     pdfkit.from_string(output_text, 'pgr_final.pdf', configuration=config, options=options)
     print("PDF gerado com sucesso!")
-
 
 if __name__ == "__main__":
     dados_extraidos = obter_dados_do_banco()
