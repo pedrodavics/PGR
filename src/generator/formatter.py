@@ -213,16 +213,17 @@ def gerar_pdf(dados):
         logging.error("Erro: O template 'pgr.html' não foi encontrado.")
         exit(1)
 
+    info_servidor = obter_dados_do_servidor().get("Informações do Servidor Produtivo")
+    dados["informacoes_servidor"] = info_servidor
+
     output_text = template.render(dados)
 
     config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
-
-    options = {
-        "encoding": "UTF-8"
-    }
+    options = {"encoding": "UTF-8"}
 
     pdfkit.from_string(output_text, 'pgr_final.pdf', configuration=config, options=options)
     print("PDF gerado com sucesso!")
+
 
 if __name__ == "__main__":
     dados_extraidos = obter_dados_do_banco()
