@@ -69,7 +69,6 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
           * NÃO faz fator de escala (mantemos a forma original).
           * Montamos um eixo Y que exibe 50% na base e 110% no topo, com ticks de 10 em 10,
             mas na prática o range real do dado continua [y_min_val..y_max_val].
-          * Dessa forma, a onda não é alterada, mas o usuário vê rótulos de 50% a 110%.
     """
     try:
         fig = go.Figure()
@@ -398,10 +397,18 @@ def generate_plotly_graph(zapi, graph, dt_inicio, dt_fim):
             margin=dict(l=80, r=50, t=70, b=90)
         )
 
-        # Salva o gráfico
+        # Salva o gráfico com nomes específicos
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        safe_name = "".join([c if c.isalnum() else "_" for c in graph['name']])
-        file_path = os.path.join(OUTPUT_DIR, f"{safe_name}_plotly.png")
+        if "cpu - utilização" in nome_grafico:
+            file_name = "CPU___utilizacao_plotly.png"
+        elif "uso de memória" in nome_grafico or "uso de memoria" in nome_grafico:
+            file_name = "Uso_de_memoria_plotly.png"
+        else:
+            # Fallback, caso não caia nas condições anteriores
+            safe_name = "".join([c if c.isalnum() else "_" for c in graph['name']])
+            file_name = f"{safe_name}_plotly.png"
+
+        file_path = os.path.join(OUTPUT_DIR, file_name)
         fig.write_image(file_path)
         logging.info(f"Gráfico Plotly salvo: {file_path}")
 

@@ -60,11 +60,13 @@ def executar_consulta(conexao, query):
         cursor.close()
 
 def obter_dados_do_servidor():
-    """Executa os comandos solicitados via SSH e retorna os resultados
-    agrupados na chave 'Informações do Servidor Produtivo'"""
+    """
+    Executa os comandos solicitados via SSH e retorna os resultados
+    agrupados na chave 'Informações do Servidor Produtivo', formatados com <br>.
+    """
     try:
         ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
         
         with open(storage_file, 'r') as f:
             data = json.load(f)
@@ -98,7 +100,9 @@ def obter_dados_do_servidor():
                 output_total += f"{comando}:\n{saida}\n"
         
         ssh.close()
-        return {"Informações do Servidor Produtivo": output_total}
+        # Formata as informações do servidor usando <br> em vez de <br><br>
+        formatted_output = "<br>".join(output_total.splitlines())
+        return {"Informações do Servidor Produtivo": formatted_output}
     except paramiko.SSHException as e:
         logging.error(f"Erro na conexão SSH: {e}")
         return {"Informações do Servidor Produtivo": "Erro na conexão SSH"}
@@ -116,7 +120,7 @@ def obter_dados_do_banco():
         )
 
         consultas = {
-            # Consulta para a versao do Oracle
+            # Consulta para a versão do Oracle
             "versao_do_banco_de_dados": """
                 SELECT version 
                 FROM PRODUCT_COMPONENT_VERSION 
@@ -189,7 +193,9 @@ def obter_dados_do_banco():
         for chave, query in consultas.items():
             resultado = executar_consulta(conexao, query)
             if resultado:
-                dados[chave] = resultado
+                # Converte cada tupla em string, separando-as com <br><br>
+                resultado_str = "<br><br>".join(str(item) for item in resultado)
+                dados[chave] = resultado_str
             else:
                 dados[chave] = "Não disponível"
 
@@ -215,13 +221,11 @@ def gerar_pdf(dados):
         logging.error("Erro: O template 'pgr.html' não foi encontrado.")
         exit(1)
 
+    # Atualiza informações do servidor no dicionário de dados
     info_servidor = obter_dados_do_servidor().get("Informações do Servidor Produtivo")
     dados["informacoes_servidor"] = info_servidor
 
     # Inserir as imagens no contexto para o template
-    # Obs.: se possível, renomeie os arquivos para evitar acentos, por exemplo:
-    # 'CPU___utilizacao_plotly.png' e 'Uso_de_memoria_plotly.png'.
-    # Mas se for manter, certifique-se de que seu sistema suporte corretamente.
     caminho_imagens = "/home/tauge/Documents/tauge/PGR/output/graphics"
     dados["monitoramento_cpu"] = f"file://{os.path.join(caminho_imagens, 'CPU___utilizacao_plotly.png')}"
     dados["monitoramento_memoria"] = f"file://{os.path.join(caminho_imagens, 'Uso_de_memoria_plotly.png')}"
@@ -229,7 +233,6 @@ def gerar_pdf(dados):
     output_text = template.render(dados)
 
     config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
-    # Habilitar acesso local para que as imagens sejam renderizadas
     options = {
         "encoding": "UTF-8",
         "enable-local-file-access": None

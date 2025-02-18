@@ -4,46 +4,56 @@
   <meta charset="UTF-8" />
   <title>Relatório</title>
   <style>
-    /* Define a página como A4 e adiciona margem de 2cm */
+    /* Define a página como A4 e adiciona margem de 1cm */
     @page {
       size: A4;
-      margin: 2cm;
+      margin: 1cm;
     }
 
-    /* Zera margens/padding padrão */
+    /* Zera margens/padding padrão do browser e define a fonte base para 21pt (50% maior que 14pt) */
     html, body {
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
-      font-size: 12pt;
+      font-size: 21pt;
     }
 
-    /* Mantém as classes originais, ajustando apenas o que for necessário */
+    /* Container que simula a área de texto do Word:
+       originalmente 19cm (para 1cm de margem em cada lado de uma A4);
+       aumentando 50%: 19cm x 1.5 = 28.5cm */
+    .page {
+      width: 28.5cm;
+      margin: 0 auto; /* Centraliza horizontalmente */
+    }
+
+    /* Zera margens e padding para todos os elementos */
     * {
       margin: 0;
       padding: 0;
       text-indent: 0;
     }
-    .s1 { color: black; font-family:"Times New Roman", serif; font-size: 10pt; }
-    .s3 { color: #033D79; font-family:Arial, sans-serif; font-size: 17.5pt; }
-    .s9 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 46pt; }
-    .s10 { color: #26A374; font-family:Arial, sans-serif; font-size: 52.5pt; }
-    .s11 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 7.5pt; }
-    .s13 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 12pt; }
-    .s14 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 12.5pt; }
-    .s15 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 13pt; }
-    .s16 { color: #434343; font-family:Arial, sans-serif; font-weight: bold; font-size: 12pt; }
-    .s17 { color: black; font-family:Arial, sans-serif; font-weight: bold; font-size: 12pt; }
-    .s18 { color: #FFF; font-family:Arial, sans-serif; font-weight: bold; font-size: 12pt; }
-    .s19, .s20 { color: black; font-family:Arial, sans-serif; font-size: 12pt; }
-    .s21 { color: #1F3863; font-family:Arial, sans-serif; font-weight: bold; font-size: 12pt; }
-    .s22 { color: black; font-family:Arial, sans-serif; font-weight: bold; text-decoration: underline; font-size: 12pt; }
+
+    /* Classes de estilo (tamanhos aumentados em 50%) */
+    .s1 { color: black; font-family:"Times New Roman", serif; font-size: 15pt; }
+    .s3 { color: #033D79; font-family:Arial, sans-serif; font-size: 26pt; }
+    .s9 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 69pt; }
+    .s10 { color: #26A374; font-family:Arial, sans-serif; font-size: 79pt; }
+    .s11 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 11pt; }
+    .s13 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 18pt; }
+    .s14 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 19pt; }
+    .s15 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 20pt; }
+    .s16 { color: #434343; font-family:Arial, sans-serif; font-weight: bold; font-size: 18pt; }
+    .s17 { color: black; font-family:Arial, sans-serif; font-weight: bold; font-size: 18pt; }
+    .s18 { color: #FFF; font-family:Arial, sans-serif; font-weight: bold; font-size: 18pt; }
+    .s19, .s20 { color: black; font-family:Arial, sans-serif; font-size: 18pt; }
+    .s21 { color: #1F3863; font-family:Arial, sans-serif; font-weight: bold; font-size: 18pt; }
+    .s22 { color: black; font-family:Arial, sans-serif; font-weight: bold; text-decoration: underline; font-size: 18pt; }
 
     h1 {
       color: black;
       font-family: Arial, sans-serif;
       font-weight: bold;
-      font-size: 12pt;
+      font-size: 21pt;
       margin-bottom: 8px;
     }
 
@@ -51,14 +61,13 @@
       color: black;
       font-family: Arial, sans-serif;
       font-weight: bold;
-      font-size: 12pt;
+      font-size: 21pt;
       text-decoration: none;
     }
 
     p {
       color: black;
       font-family: Arial, sans-serif;
-      font-size: 12pt;
       margin: 0 0 8px 0; /* espaço entre parágrafos */
     }
 
@@ -71,283 +80,264 @@
       margin-bottom: 8px;
     }
 
-    /* Ajuste de tabelas: sem largura fixa, para ocupar espaço e ficar "maior" no PDF */
+    /* As tabelas ocuparão 100% da largura do container (.page) */
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 16px; /* espaço entre tabelas e elementos abaixo */
+      margin-bottom: 16px;
     }
     td {
       padding: 8px;
-      border: 2px solid #ffffff; /* mantendo a cor da borda original */
+      border: 2px solid #ffffff;
     }
-    /* Ajuste de imagens dentro das tabelas */
+
+    /* Imagens dentro das tabelas */
     img {
       width: 100%;
       height: auto;
       object-fit: contain;
     }
-
   </style>
 </head>
 <body>
+  <!-- Início do container de página -->
+  <div class="page">
 
-  <!-- Exemplo de espaçamento inicial -->
-  <p style="padding-top: 2pt; padding-left: 54pt; text-align: left;">&nbsp;</p>
+    <!-- Espaçamento inicial -->
+    <p style="padding-top: 2pt; padding-left: 54pt; text-align: left;">&nbsp;</p>
 
-  <ol>
-    <li style="list-style-type: none;">
-      <ol>
-        <li data-list-text="1.">
-          <h1 style="padding-top: 3pt; padding-left: 43pt; text-indent: -27pt;">
-            <a name="bookmark1"></a>1. Apresentação do Administrador de Banco de Dados (DBA)
-          </h1>
+    <ol>
+      <li style="list-style-type: none;">
+        <ol>
+          <li data-list-text="1.">
+            <h1 style="padding-top: 3pt; padding-left: 43pt; text-indent: -27pt;">
+              <a name="bookmark1"></a>1. Apresentação do Administrador de Banco de Dados (DBA)
+            </h1>
 
-          <p><br></p>
-          <!-- Tabela 1 -->
-          <table style="background: #ffffff; border-color: #ffffff;">
-            <tbody>
-              <tr>
-                <td bgcolor="#D9D9D9" style="width: 150px;">
-                  <p class="s17" style="padding-top: 5pt;">NOME</p>
-                </td>
-                <td bgcolor="#F1F1F1">
-                  <p><br></p>
-                </td>
-              </tr>
-              <tr>
-                <td bgcolor="#D9D9D9" style="width: 150px;">
-                  <p class="s17" style="padding-top: 5pt;">TELEFONE</p>
-                </td>
-                <td bgcolor="#F1F1F1">
-                  <p><br></p>
-                </td>
-              </tr>
-              <tr>
-                <td bgcolor="#D9D9D9" style="width: 150px;">
-                  <p class="s17" style="padding-top: 5pt;">E-MAIL</p>
-                </td>
-                <td bgcolor="#F1F1F1">
-                  <p><br></p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+            <p><br></p>
+            <!-- Tabela 1 -->
+            <table style="background: #ffffff; border-color: #ffffff;">
+              <tbody>
+                <tr>
+                  <td bgcolor="#D9D9D9" style="width: 150px;">
+                    <p class="s17" style="padding-top: 5pt;">NOME</p>
+                  </td>
+                  <td bgcolor="#F1F1F1">
+                    <p><br></p>
+                  </td>
+                </tr>
+                <tr>
+                  <td bgcolor="#D9D9D9" style="width: 150px;">
+                    <p class="s17" style="padding-top: 5pt;">TELEFONE</p>
+                  </td>
+                  <td bgcolor="#F1F1F1">
+                    <p><br></p>
+                  </td>
+                </tr>
+                <tr>
+                  <td bgcolor="#D9D9D9" style="width: 150px;">
+                    <p class="s17" style="padding-top: 5pt;">E-MAIL</p>
+                  </td>
+                  <td bgcolor="#F1F1F1">
+                    <p><br></p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-          <p style="padding-top: 10pt;"><br></p>
-          <ol>
-            <li data-list-text="2.">
-              <h1 style="padding-left: 79pt; text-indent: -27pt;">
-                <a name="bookmark2"></a>2. Informações do Servidor Produtivo
-                <br><br>
-              </h1>
-              <!-- Tabela 2 -->
-              <table style="background: #ffffff; border-color: #ffffff;">
-                <tbody>
-                  <tr>
-                    <td bgcolor="#F1F1F1">
-                      <p>{{informacoes_servidor}}</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </li>
-          </ol>
-        </li>
-      </ol>
-    </li>
-  </ol>
+            <p style="padding-top: 10pt;"><br></p>
+            <ol>
+              <li data-list-text="2.">
+                <h1 style="padding-left: 79pt; text-indent: -27pt;">
+                  <a name="bookmark2"></a>2. Informações do Servidor Produtivo
+                  <br><br>
+                </h1>
+                <!-- Tabela 2 -->
+                <table style="background: #ffffff; border-color: #ffffff;">
+                  <tbody>
+                    <tr>
+                      <td bgcolor="#F1F1F1">
+                        <p style="font-size: 18pt;">{{informacoes_servidor}}</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </li>
+            </ol>
+          </li>
+        </ol>
+      </li>
+    </ol>
 
-  <!-- Quebras e espaçamentos extras -->
-  <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
-  <br><br><br><br><br><br><br><br><br><br><br>
+    <ol>
+      <li data-list-text="3.">
+        <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt;">
+          <a name="bookmark3"></a><br>
+        </h1>
+      </li>
+    </ol>
 
-  <ol>
-    <li data-list-text="3.">
-      <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt;">
-        <a name="bookmark3"></a><br>
-      </h1>
-    </li>
-  </ol>
-
-  <br><br>
-  <span style="font-size: 14pt;">9.1. Versão do banco de dados</span>
-  <br><br>
-  <ol>
-    <li data-list-text="2.">
-      <!-- Tabela 3 -->
-      <table style="background: #ffffff; border-color: #ffffff;">
-        <tbody>
-          <tr>
-            <td bgcolor="#D9D9D9" style="text-align: center;">
-              <span style="font-size: 18pt;"><strong>Versão do banco de dados</strong></span>
-            </td>
-          </tr>
-          <tr>
-            <td bgcolor="#D9D9D9" style="height: 210px;">{{versao_do_banco_de_dados}}</td>
-          </tr>
-        </tbody>
-      </table>
-    </li>
-  </ol>
-
-  <br><br>
-  <span style="font-size: 14pt;">9.2. Maiores Tabelas e Índices</span>
-  <br><br>
-  <ol>
-    <li data-list-text="2.">
-      <!-- Tabela 4 -->
-      <table style="background: #ffffff; border-color: #ffffff;">
-        <tbody>
-          <tr>
-            <td bgcolor="#D9D9D9" style="height: 100px;">{{maiores_tabelas}}</td>
-          </tr>
-        </tbody>
-      </table>
-    </li>
-  </ol>
-
-  <br><br>
-  <p style="padding-left: 113pt; text-indent: -47pt;">
-    <span style="font-size: 14pt;">9.3. Top SQL com maior tempo de processamento</span>
     <br><br>
-  </p>
-  <ol>
-    <li data-list-text="2.">
-      <!-- Tabela 5 -->
-      <table style="background: #ffffff; border-color: #ffffff;">
-        <tbody>
-          <tr>
-            <td bgcolor="#D9D9D9" style="height: 100px;">{{top_sql}}</td>
-          </tr>
-        </tbody>
-      </table>
-    </li>
-  </ol>
-
-  <!-- Espaçamentos extras -->
-  <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
-
-  <p style="padding-left: 113pt; text-indent: -47pt;">
-    <span style="font-size: 14pt;">9.4. Monitoramento da Memória</span>
+    <span style="font-size: 21pt;">9.1. Versão do banco de dados</span>
     <br><br>
-  </p>
-  <ol>
-    <li data-list-text="2.">
-      <!-- Tabela 6 -->
-      <table style="background: #ffffff; border-color: #ffffff;">
-        <tbody>
-          <tr>
-            <td bgcolor="#D9D9D9" style="height: 300px;">
-              <img src="{{ monitoramento_memoria }}" alt="Monitoramento da Memória" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </li>
-    <li data-list-text="2.">&nbsp;</li>
-  </ol>
+    <ol>
+      <li data-list-text="2.">
+        <!-- Tabela 3 -->
+        <table style="background: #ffffff; border-color: #ffffff;">
+          <tbody>
+            <tr>
+              <td bgcolor="#D9D9D9" style="text-align: center;">
+                <span style="font-size: 26pt;"><strong>Versão do banco de dados</strong></span>
+              </td>
+            </tr>
+            <tr>
+              <td bgcolor="#D9D9D9" style="height: 50px;">{{versao_do_banco_de_dados}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </li>
+    </ol>
 
-  <br>
-  <ol>
-    <li data-list-text="2.">
-      <p style="padding-left: 113pt; text-indent: -47pt;">
-        <span style="font-size: 14pt;">9.5. Monitoramento da CPU</span>
-        <br><br>
-      </p>
-      <ol>
-        <li data-list-text="2.">
-          <!-- Tabela 7 -->
-          <table style="background: #ffffff; border-color: #ffffff;">
-            <tbody>
-              <tr>
-                <td bgcolor="#D9D9D9" style="height: 300px;">
-                  <img src="{{ monitoramento_cpu }}" alt="Monitoramento da CPU" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </li>
-      </ol>
-    </li>
-  </ol>
+    <br><br>
+    <span style="font-size: 21pt;">9.2. Maiores Tabelas e Índices</span>
+    <br><br>
+    <ol>
+      <li data-list-text="2.">
+        <!-- Tabela 4 -->
+        <table style="background: #ffffff; border-color: #ffffff;">
+          <tbody>
+            <tr>
+              <td bgcolor="#D9D9D9" style="height: 100px;">{{maiores_tabelas}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </li>
+    </ol>
 
-  <br><br>
-  <ol>
-    <li data-list-text="2.">
-      <p style="padding-left: 113pt; text-indent: -47pt;">
-        <span style="font-size: 14pt;">9.6. Crescimento da Base</span>
-        <br><br>
-      </p>
-      <ol>
-        <li data-list-text="2.">
-          <!-- Tabela 8 -->
-          <table style="background: #ffffff; border-color: #ffffff;">
-            <tbody>
-              <tr>
-                <td bgcolor="#D9D9D9" style="height: 300px;">{{crescimento_base}}</td>
-              </tr>
-            </tbody>
-          </table>
-        </li>
-      </ol>
-    </li>
-  </ol>
+    <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+    <span style="font-size: 21pt;">9.3. Top SQL com maior time de processamento</span>
+    <br><br>
+    <ol>
+      <li data-list-text="2.">
+        <!-- Tabela 5 -->
+        <table style="background: #ffffff; border-color: #ffffff;">
+          <tbody>
+            <tr>
+              <!-- Ajuste para permitir quebras de linha -->
+              <td bgcolor="#D9D9D9"
+                  style="min-height: 100px;
+                         white-space: pre-wrap;
+                         word-wrap: break-word;
+                         overflow-wrap: break-word;">
+                {{top_sql}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </li>
+    </ol>
 
-  <!-- Espaços grandes adicionais -->
-  <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
-
-  <ol>
-    <li style="list-style-type: none;">
-      <ol>
-        <li data-list-text="5.">
-          <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt;">10. Backup</h1>
-          <p style="padding-top: 4pt;">
-            <span style="font-size: 14pt;">
-              10.1. Backup do banco de dados
-              <br><br><br>
-            </span>
-          </p>
-          <!-- Tabela 9 -->
-          <table style="background: #ffffff; border-color: #ffffff; width: 493px;">
-            <tbody>
-              <tr>
-                <td bgcolor="#D9D9D9" style="width: 126px;">&nbsp;</td>
-                <td style="width: 362.484px;">
-                  <p>&nbsp;Houveram desvios nos Backup's neste mês.</p>
-                </td>
-              </tr>
-              <tr>
-                <td bgcolor="#D9D9D9" style="width: 126px;"><br></td>
-                <td style="width: 362.484px;">
-                  <p>&nbsp;Não houveram desvios nos backup's neste mês.</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
+    <!-- Espaçamentos extras -->
+    <br><br><br><br><br><br><br><br><br><br>
+    <p style="padding-left: 113pt; text-indent: -47pt;">
+      <span style="font-size: 21pt;">9.4. Monitoramento da Memória</span>
+      <br><br>
+    </p>
+    <div style="text-align: center; margin-bottom: 30px;">
+      <img src="{{monitoramento_memoria}}" alt="Monitoramento da Memória" style="max-width: 100%; height: auto;">
+    </div>
+    
+    <br>
+    
+    <p style="padding-left: 113pt; text-indent: -47pt;">
+      <span style="font-size: 21pt;">9.5. Monitoramento da CPU</span>
+      <br><br>
+    </p>
+    <div style="text-align: center; margin-bottom: 30px;">
+      <img src="{{monitoramento_cpu}}" alt="Monitoramento da CPU" style="max-width: 100%; height: auto;">
+    </div>
+    
+    <br><br>
+    <ol>
+      <li data-list-text="2.">
+        <p style="padding-left: 113pt; text-indent: -47pt;">
+          <span style="font-size: 21pt;">9.6. Crescimento da Base</span>
           <br><br>
-          <span style="font-size: 14pt;">10.1 Relatório de backup</span>
-          <br><br>
-          <ol>
-            <li data-list-text="2.">
-              <!-- Tabela 10 -->
-              <table style="background: #ffffff; border-color: #ffffff;">
-                <tbody>
-                  <tr>
-                    <td bgcolor="#D9D9D9" style="height: 300px;">{{print_backup}}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </li>
-          </ol>
-        </li>
-      </ol>
-    </li>
-  </ol>
+        </p>
+        <ol>
+          <li data-list-text="2.">
+            <!-- Tabela 8 -->
+            <table style="background: #ffffff; border-color: #ffffff;">
+              <tbody>
+                <tr>
+                  <td bgcolor="#D9D9D9" style="height: 100px;">{{crescimento_base}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </li>
+        </ol>
+      </li>
+    </ol>
 
-  <!-- Espaços finais -->
-  <br><br><br><br><br><br><br><br><br><br>
+    <!-- Espaços grandes adicionais -->
+    <br><br><br><br><br><br><br><br><br><br><br><br>
+    <br><br><br><br><br><br><br><br><br><br><br><br>
+    <br><br><br><br><br><br><br><br><br><br><br><br>
+    <br><br>
 
+    <ol>
+      <li style="list-style-type: none;">
+        <ol>
+          <li data-list-text="5.">
+            <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt;">10. Backup</h1>
+            <p style="padding-top: 4pt;">
+              <span style="font-size: 21pt;">
+                10.1. Backup do banco de dados
+                <br><br><br>
+              </span>
+            </p>
+            <!-- Tabela 9 -->
+            <table style="background: #ffffff; border-color: #ffffff; width: 493px;">
+              <tbody>
+                <tr>
+                  <td bgcolor="#D9D9D9" style="width: 126px;">&nbsp;</td>
+                  <td style="width: 362.484px;">
+                    <p>&nbsp;Houveram desvios nos Backup's neste mês.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td bgcolor="#D9D9D9" style="width: 126px;"><br></td>
+                  <td style="width: 362.484px;">
+                    <p>&nbsp;Não houveram desvios nos backup's neste mês.</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <br><br>
+            <span style="font-size: 21pt;">10.1 Relatório de backup</span>
+            <br><br>
+            <ol>
+              <li data-list-text="2.">
+                <!-- Tabela 10 -->
+                <table style="background: #ffffff; border-color: #ffffff;">
+                  <tbody>
+                    <tr>
+                      <td bgcolor="#D9D9D9" style="height: 300px;">{{print_backup}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </li>
+            </ol>
+          </li>
+        </ol>
+      </li>
+    </ol>
+
+    <!-- Espaços finais -->
+    <br><br><br><br><br><br><br><br><br><br>
+
+  </div>
+  <!-- Fim do container .page -->
 </body>
 </html>
