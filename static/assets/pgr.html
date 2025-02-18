@@ -4,13 +4,17 @@
   <meta charset="UTF-8" />
   <title>Relatório</title>
   <style>
-    /* Define a página como A4 e adiciona margem de 1cm */
+    /* Define a página como A4.
+       O primeiro valor (1cm) é para o topo e base;
+       o segundo valor (1cm) é para as laterais.
+       Para alterar as margens laterais via HTML, modifique o segundo valor.
+       Exemplo: para 2cm laterais, use: margin: 1cm 2cm; */
     @page {
       size: A4;
-      margin: 1cm;
+      margin: 1cm 1cm;
     }
 
-    /* Zera margens/padding padrão do browser e define a fonte base para 21pt (50% maior que 14pt) */
+    /* Zera as margens/padding padrão do browser e define a fonte base para 21pt (50% maior que 14pt) */
     html, body {
       margin: 0;
       padding: 0;
@@ -38,7 +42,7 @@
     .s3 { color: #033D79; font-family:Arial, sans-serif; font-size: 26pt; }
     .s9 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 69pt; }
     .s10 { color: #26A374; font-family:Arial, sans-serif; font-size: 79pt; }
-    .s11 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 11pt; }
+    .s11 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 12pt; }
     .s13 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 18pt; }
     .s14 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 19pt; }
     .s15 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 20pt; }
@@ -157,7 +161,7 @@
                   <tbody>
                     <tr>
                       <td bgcolor="#F1F1F1">
-                        <p style="font-size: 18pt;">{{informacoes_servidor}}</p>
+                        <p style="font-size: 14pt;">{{informacoes_servidor}}</p>
                       </td>
                     </tr>
                   </tbody>
@@ -214,7 +218,7 @@
       </li>
     </ol>
 
-    <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+    <br><br><br><br><br><br>
     <span style="font-size: 21pt;">9.3. Top SQL com maior time de processamento</span>
     <br><br>
     <ol>
@@ -223,12 +227,17 @@
         <table style="background: #ffffff; border-color: #ffffff;">
           <tbody>
             <tr>
-              <!-- Ajuste para permitir quebras de linha -->
+              <!-- Nesta célula, removemos (ou reduzimos) o padding esquerdo e direito
+                   para que o conteúdo ({{top_sql}}) se estique até quase a borda interna do container cinza.
+                   Para alterar futuramente, ajuste os valores de 'padding-left' e 'padding-right'. -->
               <td bgcolor="#D9D9D9"
                   style="min-height: 100px;
                          white-space: pre-wrap;
                          word-wrap: break-word;
-                         overflow-wrap: break-word;">
+                         overflow-wrap: break-word;
+                         font-size: 11pt;
+                         padding-left: 1px;
+                         padding-right: 1px;">
                 {{top_sql}}
               </td>
             </tr>
@@ -238,7 +247,7 @@
     </ol>
 
     <!-- Espaçamentos extras -->
-    <br><br><br><br><br><br><br><br><br><br>
+    <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
     <p style="padding-left: 113pt; text-indent: -47pt;">
       <span style="font-size: 21pt;">9.4. Monitoramento da Memória</span>
       <br><br>
@@ -282,8 +291,7 @@
     <!-- Espaços grandes adicionais -->
     <br><br><br><br><br><br><br><br><br><br><br><br>
     <br><br><br><br><br><br><br><br><br><br><br><br>
-    <br><br><br><br><br><br><br><br><br><br><br><br>
-    <br><br>
+    <br><br><br><br>
 
     <ol>
       <li style="list-style-type: none;">
@@ -323,7 +331,7 @@
                 <table style="background: #ffffff; border-color: #ffffff;">
                   <tbody>
                     <tr>
-                      <td bgcolor="#D9D9D9" style="height: 300px;">{{print_backup}}</td>
+                      <td bgcolor="#D9D9D9" style="height: 300px; font-size: 12pt;">{{print_backup}}</td>
                     </tr>
                   </tbody>
                 </table>

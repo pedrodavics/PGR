@@ -235,7 +235,11 @@ def gerar_pdf(dados):
     config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
     options = {
         "encoding": "UTF-8",
-        "enable-local-file-access": None
+        "enable-local-file-access": None,
+        "margin-top": "0.3cm",
+        "margin-right": "3cm",
+        "margin-bottom": "1cm",
+        "margin-left": "2cm"
     }
 
     pdfkit.from_string(output_text, 'pgr_final.pdf', configuration=config, options=options)

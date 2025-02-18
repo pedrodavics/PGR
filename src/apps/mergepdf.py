@@ -20,8 +20,7 @@ def main():
     
     writer = PdfWriter()
     
-    # Mapeamento: chave é o índice da página do template (começando em 0)
-    # e valor é o índice da página do pgr_final a ser inserida.
+    # Mapeamento de substituições
     replacements = {
         3: 0,   # Página 4 do template -> Página 1 do pgr_final
         9: 1,   # Página 10 do template -> Página 2 do pgr_final
@@ -29,12 +28,20 @@ def main():
         11: 3   # Página 12 do template -> Página 4 do pgr_final
     }
     
-    # Percorre todas as páginas do template
-    for i in range(len(template_reader.pages)):
+    # Adiciona as 12 primeiras páginas do template (páginas 1 a 12)
+    for i in range(12):  # índices 0 a 11 correspondem às páginas 1 a 12
         if i in replacements:
             writer.add_page(pgr_final_reader.pages[replacements[i]])
         else:
             writer.add_page(template_reader.pages[i])
+    
+    # Insere a página 5 do pgr_final.pdf (índice 4) como página 13 do relatorio.pdf
+    writer.add_page(pgr_final_reader.pages[4])
+    
+    # Adiciona o restante das páginas do template
+    # A partir da página 13 do template (índice 12)
+    for i in range(12, len(template_reader.pages)):
+        writer.add_page(template_reader.pages[i])
     
     # Define o caminho da pasta de saída e cria-a, se não existir
     output_dir = '/home/tauge/Documents/tauge/PGR/output'
