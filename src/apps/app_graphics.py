@@ -446,6 +446,10 @@ def processar_graficos():
         for graph in graphs_relevantes:
             generate_plotly_graph(zapi, graph, dt_inicio, dt_fim)
 
+        # Mensagem exibida após gerar todos os gráficos
+        print("Gráficos gerados com sucesso!") 
+
+
     except Exception as e:
         logging.error(f"Erro crítico: {str(e)}")
         print(f"Erro: {str(e)}")

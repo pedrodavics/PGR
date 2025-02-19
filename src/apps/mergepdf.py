@@ -3,8 +3,8 @@ import os
 
 def main():
     # Caminhos absolutos dos arquivos
-    template_pdf_path = '/home/tauge/Documents/tauge/PGR/template pgr final.pdf'
-    pgr_final_pdf_path = '/home/tauge/Documents/tauge/PGR/pgr_final.pdf'
+    template_pdf_path = '/home/tauge/Documents/tauge/PGR/static/assets/template pgr final.pdf'
+    pgr_final_pdf_path = '/home/tauge/Documents/tauge/PGR/output/pdf temp/pgr_final.pdf'
     
     # Verifica se os arquivos existem
     if not os.path.isfile(template_pdf_path):

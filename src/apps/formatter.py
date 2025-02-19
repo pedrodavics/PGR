@@ -240,10 +240,16 @@ def gerar_pdf(dados):
         "margin-right": "3cm",
         "margin-bottom": "1cm",
         "margin-left": "2cm"
-    }
+   }
 
-    pdfkit.from_string(output_text, 'pgr_final.pdf', configuration=config, options=options)
-    print("PDF gerado com sucesso!")
+    # Define o diretório de destino para o PDF
+    output_dir = "/home/tauge/Documents/tauge/PGR/output/pdf temp"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    output_file = os.path.join(output_dir, "pgr_final.pdf")
+
+    pdfkit.from_string(output_text, output_file, configuration=config, options=options)
+    print("PDF gerado com sucesso em:", output_file)
 
 if __name__ == "__main__":
     dados_extraidos = obter_dados_do_banco()
