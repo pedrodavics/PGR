@@ -10,6 +10,7 @@ from tkinter import messagebox
 from tkinter import ttk
 import socket
 from datetime import datetime
+import threading
 
 load_dotenv()
 
@@ -18,6 +19,14 @@ port = os.getenv("PORT_DB")
 dbname = os.getenv("NAME_DB")
 user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
+
+def center_window(win, width, height):
+    win.update_idletasks()
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    win.geometry(f"{width}x{height}+{x}+{y}")
 
 def connect_db():
     try:
@@ -131,25 +140,39 @@ def execute_scripts():
         subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
         subprocess.run(["python", "src/apps/formatter.py"], check=True)
         subprocess.run(["python", "src/apps/mergepdf.py"], check=True)
-        messagebox.showinfo("Sucesso", "Scripts executados com sucesso!")
     except subprocess.CalledProcessError as e:
-        messagebox.showerror("Erro", f"Erro ao executar os scripts: {e}")
+        raise Exception(f"Erro ao executar os scripts: {e}")
 
-def generate_report(client_id, username):
+def generate_report_worker(client_id, username):
     client_data = fetch_client_data(client_id)
     if client_data:
         save_client_info(client_data)
-        save_user_data(username, client_data[1]) 
-        execute_scripts()
-        clean()
-        messagebox.showinfo("Sucesso", "Relatório gerado com sucesso!")
+        save_user_data(username, client_data[1])
+        try:
+            execute_scripts()
+            clean()
+            return True, "Relatório gerado com sucesso!"
+        except Exception as e:
+            return False, str(e)
     else:
-        messagebox.showerror("Erro", "Cliente não encontrado.")
+        return False, "Cliente não encontrado."
+
+def finish_report_generation(progress_win, client_root, success, msg):
+    progress_win.destroy()
+    if success:
+        messagebox.showinfo("Sucesso", msg)
+    else:
+        messagebox.showerror("Erro", msg)
+
+def thread_generate_report(client_id, username, progress_win, client_root):
+    success, msg = generate_report_worker(client_id, username)
+    client_root.after(0, lambda: finish_report_generation(progress_win, client_root, success, msg))
 
 def show_client_selection(root):
     root.destroy()
     client_root = tk.Tk()
     client_root.title("Gerador de Relatórios")
+    center_window(client_root, 400, 300)
 
     tk.Label(client_root, text="Selecione um cliente:").pack(pady=10)
     clients = fetch_clients()
@@ -170,7 +193,20 @@ def show_client_selection(root):
             return
         selected_client = next((client for client in clients if client[1] == selected_client_name), None)
         if selected_client:
-            generate_report(selected_client[0], username)
+            # Cria a janela de progresso
+            progress_win = tk.Toplevel(client_root)
+            progress_win.title("Aguarde...")
+            center_window(progress_win, 300, 100)
+            tk.Label(progress_win, text="Gerando relatório...").pack(pady=10, padx=10)
+            progress_bar = ttk.Progressbar(progress_win, mode='indeterminate', length=250)
+            progress_bar.pack(pady=10, padx=10)
+            progress_bar.start()
+            # Executa a geração do relatório em uma thread separada
+            threading.Thread(
+                target=thread_generate_report,
+                args=(selected_client[0], username, progress_win, client_root),
+                daemon=True
+            ).start()
         else:
             messagebox.showerror("Erro", "Cliente selecionado não encontrado.")
 
