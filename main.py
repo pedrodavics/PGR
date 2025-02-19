@@ -19,9 +19,6 @@ dbname = os.getenv("NAME_DB")
 user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
 
-master = os.getenv("USER_MAIN")
-key = os.getenv("PASS_MAIN")
-
 def connect_db():
     try:
         connection = psycopg2.connect(
@@ -67,7 +64,7 @@ def fetch_client_data(client_id):
     return None
 
 def save_user_data(username, client_name):
-    user_ip = get_ip_address()
+    user_ip = socket.gethostbyname(socket.gethostname())
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     connection = connect_db()
@@ -85,9 +82,6 @@ def save_user_data(username, client_name):
         finally:
             cursor.close()
             connection.close()
-
-def get_ip_address():
-    return socket.gethostbyname(socket.gethostname())
 
 def save_client_info(client_data):
     client_info = {
@@ -115,8 +109,7 @@ def clean():
         if os.path.exists("output/reports/pdf/relatorio.pdf"):
             shutil.move("output/reports/pdf/relatorio.pdf", "output/relatorio.pdf")
             print("Relatório movido para a pasta 'output' com sucesso!")
-        else:
-            messagebox.showerror("Erro", "Falha ao encontrar o relatório para mover.")
+        # Caso o relatório não exista, não exibe nenhuma mensagem
 
         if os.path.exists("output/reports"):
             shutil.rmtree("output/reports")
@@ -132,13 +125,12 @@ def clean():
 
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao limpar arquivos temporários: {e}")
-
+        
 def execute_scripts():
     try:
         subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
-        subprocess.run(["python", "src/apps/app_jdbc.py"], check=True)
-        subprocess.run(["python", "src/apps/app_os.py"], check=True)
-        subprocess.run(["python", "src/generator/pdf.py"], check=True)
+        subprocess.run(["python", "src/apps/formatter.py"], check=True)
+        subprocess.run(["python", "src/apps/mergepdf.py"], check=True)
         messagebox.showinfo("Sucesso", "Scripts executados com sucesso!")
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Erro", f"Erro ao executar os scripts: {e}")
@@ -154,12 +146,6 @@ def generate_report(client_id, username):
     else:
         messagebox.showerror("Erro", "Cliente não encontrado.")
 
-def authenticate_user(username, password):
-    if username == master and password == key:
-        return True
-    else:
-        return False
-    
 def show_client_selection(root):
     root.destroy()
     client_root = tk.Tk()
@@ -192,27 +178,10 @@ def show_client_selection(root):
     client_root.mainloop()
 
 def main():
-    auth_root = tk.Tk()
-    auth_root.title("Autenticação")
-
-    tk.Label(auth_root, text="Usuário:").pack(pady=10)
-    username_entry = tk.Entry(auth_root)
-    username_entry.pack(pady=5)
-
-    tk.Label(auth_root, text="Senha:").pack(pady=10)
-    password_entry = tk.Entry(auth_root, show="*")
-    password_entry.pack(pady=5)
-
-    def on_authenticate():
-        username = username_entry.get()
-        password = password_entry.get()
-        if authenticate_user(username, password):
-            show_client_selection(auth_root)
-        else:
-            messagebox.showerror("Erro", "Usuário ou senha incorretos.")
-
-    tk.Button(auth_root, text="Entrar", command=on_authenticate).pack(pady=20)
-    auth_root.mainloop()
+    # Abre diretamente a janela de seleção de cliente sem autenticação
+    root = tk.Tk()
+    root.withdraw()  # Oculta a janela principal
+    show_client_selection(root)
 
 if __name__ == "__main__":
     main()
