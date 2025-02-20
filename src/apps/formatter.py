@@ -42,7 +42,7 @@ def carregar_configuracoes_do_storage():
 
             jdbc_url = f"jdbc:oracle:thin:@{ip}:{port_jdbc}/{db_name}"
             logging.info(f"String de conexão montada: {jdbc_url}")
-            return jdbc_url, jdbc_user, jdbc_password
+            return jdbc_url, jdbc_user, jdbc_password, db_name
     else:
         raise FileNotFoundError("Arquivo 'client_info.json' não encontrado.")
 
@@ -109,7 +109,7 @@ def obter_dados_do_servidor():
 
 def obter_dados_do_banco():
     """Executa as consultas e retorna um dicionário com os dados formatados"""
-    jdbc_url, jdbc_user, jdbc_password = carregar_configuracoes_do_storage()
+    jdbc_url, jdbc_user, jdbc_password, db_name = carregar_configuracoes_do_storage()
     
     try:
         conexao = jaydebeapi.connect(
@@ -186,7 +186,9 @@ def obter_dados_do_banco():
                 ON ro.session_recid = j.session_recid AND ro.session_stamp = j.session_stamp
                 WHERE j.start_time > TRUNC(SYSDATE)-7
                 ORDER BY j.start_time
-            """
+            """,
+             # Nova consulta: exibe o nome do cliente (nome do banco) conforme definido no client_info.json
+            "nome_do_cliente": f"SELECT '{db_name}' AS nome_cliente FROM dual"
         }
 
         dados = {}

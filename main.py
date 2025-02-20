@@ -41,7 +41,7 @@ def connect_db():
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao conectar ao banco de dados: {e}")
         return None
-    
+
 def fetch_clients():
     connection = connect_db()
     if connection:
@@ -93,6 +93,7 @@ def save_user_data(username, client_name):
             connection.close()
 
 def save_client_info(client_data):
+    # A coluna "nome" será utilizada para formar o nome do PDF
     client_info = {
         "idcliente": client_data[0],
         "nome": client_data[1],
@@ -106,35 +107,75 @@ def save_client_info(client_data):
     with open('client_info.json', 'w') as json_file:
         json.dump(client_info, json_file)
 
+def get_month_in_portuguese(dt):
+    """Retorna o nome do mês em português (minúsculo) para o datetime informado."""
+    months = {
+        1: 'janeiro',
+        2: 'fevereiro',
+        3: 'março',
+        4: 'abril',
+        5: 'maio',
+        6: 'junho',
+        7: 'julho',
+        8: 'agosto',
+        9: 'setembro',
+        10: 'outubro',
+        11: 'novembro',
+        12: 'dezembro'
+    }
+    return months[dt.month]
+
 def clean():
     try:
-        os.remove('client_info.json')
-        print("Arquivo client_info.json apagado com sucesso!")
+        # Captura o valor da coluna "nome" antes de remover o arquivo de configurações
+        nome_cliente = None
+        if os.path.exists('client_info.json'):
+            with open('client_info.json', 'r') as f:
+                client_info = json.load(f)
+                nome_cliente = client_info.get("nome")
+            os.remove('client_info.json')
+            print("Arquivo client_info.json apagado com sucesso!")
+        else:
+            print("Arquivo client_info.json não encontrado para remoção.")
         
         if os.path.exists("output/images"):
             shutil.rmtree("output/images")
             print("Pasta 'images' apagada com sucesso!")
-
-        if os.path.exists("output/reports/pdf/relatorio.pdf"):
-            shutil.move("output/reports/pdf/relatorio.pdf", "output/relatorio.pdf")
-            print("Relatório movido para a pasta 'output' com sucesso!")
-        # Caso o relatório não exista, não exibe nenhuma mensagem
-
+        
+        # Renomeia o PDF gerado.
+        # O script mergepdf.py originalmente gera o arquivo em "output/relatorio.pdf"
+        if os.path.exists("output/relatorio.pdf"):
+            mes_atual = get_month_in_portuguese(datetime.now())
+            # Se nome_cliente não foi encontrado, usa "Cliente" como padrão
+            nome_cliente = nome_cliente if nome_cliente else "Cliente"
+            novo_nome_pdf = f"output/Relatório situacional {nome_cliente} de {mes_atual}.pdf"
+            shutil.move("output/relatorio.pdf", novo_nome_pdf)
+            print(f"Relatório movido para a pasta 'output' com o nome '{novo_nome_pdf}' com sucesso!")
+        
         if os.path.exists("output/reports"):
             shutil.rmtree("output/reports")
             print("Pasta 'reports' apagada com sucesso!")
-
+        
+        # Exclusão das pastas adicionais
+        if os.path.exists("output/pdf temp"):
+            shutil.rmtree("output/pdf temp")
+            print("Pasta 'pdf temp' apagada com sucesso!")
+        
+        if os.path.exists("output/graphics"):
+            shutil.rmtree("output/graphics")
+            print("Pasta 'graphics' apagada com sucesso!")
+        
         if os.path.exists("logs/zabbix.log"):
             os.remove("logs/zabbix.log")
             print("Arquivo 'zabbix.log' apagado com sucesso!")
-
+        
         if os.path.exists("logs/pdf.log"):
             os.remove("logs/pdf.log")
             print("Arquivo 'pdf.log' apagado com sucesso!")
-
+    
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao limpar arquivos temporários: {e}")
-        
+
 def execute_scripts():
     try:
         subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
