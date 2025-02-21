@@ -93,7 +93,8 @@ def save_user_data(username, client_name):
             connection.close()
 
 def save_client_info(client_data):
-    # A coluna "nome" será utilizada para formar o nome do PDF
+    # A coluna "nome" será utilizada para formar o nome do PDF.
+    # Conforme solicitado, "userssh" é a coluna 9 (índice 8) e "senhassh" é a coluna 10 (índice 9)
     client_info = {
         "idcliente": client_data[0],
         "nome": client_data[1],
@@ -102,7 +103,9 @@ def save_client_info(client_data):
         "tpbanco": client_data[4],
         "nomebanco": client_data[5],
         "portabanco": client_data[6],
-        "idhostzbx": client_data[7]
+        "idhostzbx": client_data[7],
+        "userssh": client_data[8],
+        "senhassh": client_data[9]
     }
     with open('client_info.json', 'w') as json_file:
         json.dump(client_info, json_file)

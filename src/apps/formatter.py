@@ -185,6 +185,7 @@ def obter_dados_do_banco():
                      GROUP BY o.session_recid, o.session_stamp) ro 
                 ON ro.session_recid = j.session_recid AND ro.session_stamp = j.session_stamp
                 WHERE j.start_time > TRUNC(SYSDATE)-7
+                AND j.input_type not in ('ARCHIVELOG') 
                 ORDER BY j.start_time
             """,
              # Nova consulta: exibe o nome do cliente (nome do banco) conforme definido no client_info.json
