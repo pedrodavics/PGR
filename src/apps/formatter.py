@@ -12,19 +12,18 @@ load_dotenv()
 # Configuração de logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configurações JDBC
+# Configurações JDBC (permanece obtendo do .env)
 jdbc_user = os.getenv("USER_JDBC")
 jdbc_password = os.getenv("PASS_JDBC")
 jdbc_jar = os.getenv("JAR_JDBC")
 
-# Configurações SO
-ssh_user = os.getenv("USER_OS")
-ssh_password = os.getenv("PASS_OS")
+# O código anterior obtinha as credenciais SSH via .env.
+# Agora elas serão obtidas do arquivo JSON (chaves "userssh" e "senhassh").
 
 # Caminho do template HTML
 template_path = "static/assets/pgr.html"
 
-# Carregar configurações do cliente
+# Caminho do arquivo de armazenamento
 storage_file = 'client_info.json'
 
 def carregar_configuracoes_do_storage():
@@ -36,10 +35,10 @@ def carregar_configuracoes_do_storage():
             db_name = data.get('nomebanco')
             port_jdbc = data.get('portabanco')
             port_ssh = data.get('portassh')
-
+            
             if not all([ip, db_name, jdbc_user, jdbc_password]):
                 raise ValueError("Informações incompletas no arquivo de armazenamento.")
-
+            
             jdbc_url = f"jdbc:oracle:thin:@{ip}:{port_jdbc}/{db_name}"
             logging.info(f"String de conexão montada: {jdbc_url}")
             return jdbc_url, jdbc_user, jdbc_password, db_name
@@ -63,6 +62,7 @@ def obter_dados_do_servidor():
     """
     Executa os comandos solicitados via SSH e retorna os resultados
     agrupados na chave 'Informações do Servidor Produtivo', formatados com <br>.
+    Agora utiliza as credenciais SSH contidas no JSON.
     """
     try:
         ssh = paramiko.SSHClient()
@@ -72,6 +72,8 @@ def obter_dados_do_servidor():
             data = json.load(f)
             ip = data.get('ip')
             port_ssh = data.get('portassh')
+            ssh_user = data.get('userssh')
+            ssh_password = data.get('senhassh')
         
         ssh.connect(ip, port=int(port_ssh), username=ssh_user, password=ssh_password)
 
@@ -188,7 +190,7 @@ def obter_dados_do_banco():
                 AND j.input_type not in ('ARCHIVELOG') 
                 ORDER BY j.start_time
             """,
-             # Nova consulta: exibe o nome do cliente (nome do banco) conforme definido no client_info.json
+            # Nova consulta: exibe o nome do cliente (nome do banco) conforme definido no client_info.json
             "nome_do_cliente": f"SELECT '{db_name}' AS nome_cliente FROM dual"
         }
 
