@@ -4,30 +4,29 @@
   <meta charset="UTF-8" />
   <title>Relatório</title>
   <style>
-    /* Define a página como A4.
-       O primeiro valor (1cm) é para o topo e base;
-       o segundo valor (1cm) é para as laterais.
-       Para alterar as margens laterais via HTML, modifique o segundo valor.
-       Exemplo: para 2cm laterais, use: margin: 1cm 2cm; */
+    /* Define o tamanho da página (A4) e as margens para impressão */
     @page {
       size: A4;
-      margin: 1cm 1cm;
+      margin: 1cm;
     }
 
-    /* Zera as margens/padding padrão do browser e define a fonte base para 21pt (50% maior que 14pt) */
+    /* Define a fonte base e remove margens e padding padrão */
     html, body {
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
-      font-size: 21pt;
+      font-size: 21pt; /* Altere esse valor para mudar a fonte base de todo o documento */
     }
 
-    /* Container que simula a área de texto do Word:
-       originalmente 19cm (para 1cm de margem em cada lado de uma A4);
-       aumentando 50%: 19cm x 1.5 = 28.5cm */
+    /* Cada contêiner .page representa uma página com quebra forçada.
+       Adicionamos padding-top para criar espaço extra no topo (3cm, neste exemplo). */
     .page {
-      width: 28.5cm;
-      margin: 0 auto; /* Centraliza horizontalmente */
+      width: 30cm;
+      height: 50cm;
+      margin: 0 auto;
+      overflow: hidden;
+      page-break-after: always;
+      padding-top: 2cm;  /* Espaçamento extra no topo da página */
     }
 
     /* Zera margens e padding para todos os elementos */
@@ -37,7 +36,7 @@
       text-indent: 0;
     }
 
-    /* Classes de estilo (tamanhos aumentados em 50%) */
+    /* Estilos das classes conforme seu código original */
     .s1 { color: black; font-family:"Times New Roman", serif; font-size: 15pt; }
     .s3 { color: #033D79; font-family:Arial, sans-serif; font-size: 26pt; }
     .s9 { color: #3B3B3B; font-family:Arial, sans-serif; font-size: 69pt; }
@@ -72,10 +71,10 @@
     p {
       color: black;
       font-family: Arial, sans-serif;
-      margin: 0 0 8px 0; /* espaço entre parágrafos */
+      margin-bottom: 8px;
     }
 
-    /* Listas com contadores */
+    /* Listas */
     #l1, #l2, #l3, #l4, #l5, #l6, #l7, #l8 {
       padding-left: 0;
     }
@@ -84,7 +83,7 @@
       margin-bottom: 8px;
     }
 
-    /* As tabelas ocuparão 100% da largura do container (.page) */
+    /* Tabelas: 100% da largura e sem espaçamento */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -95,7 +94,7 @@
       border: 2px solid #ffffff;
     }
 
-    /* Imagens dentro das tabelas */
+    /* Imagens nas tabelas */
     img {
       width: 100%;
       height: auto;
@@ -104,12 +103,10 @@
   </style>
 </head>
 <body>
-  <!-- Início do container de página -->
-  <div class="page">
 
-    <!-- Espaçamento inicial -->
-    <p style="padding-top: 2pt; padding-left: 54pt; text-align: left;">&nbsp;</p>
-
+  <!-- Página 1: Apresentação e Informações do Servidor -->
+  <div class="page" id="pagina1">
+    <!-- Espaço superior já criado com padding-top na .page -->
     <ol>
       <li style="list-style-type: none;">
         <ol>
@@ -117,7 +114,6 @@
             <h1 style="padding-top: 3pt; padding-left: 43pt; text-indent: -27pt;">
               <a name="bookmark1"></a>1. Apresentação do Administrador de Banco de Dados (DBA)
             </h1>
-
             <p><br></p>
             <!-- Tabela 1 -->
             <table style="background: #ffffff; border-color: #ffffff;">
@@ -148,7 +144,6 @@
                 </tr>
               </tbody>
             </table>
-
             <p style="padding-top: 10pt;"><br></p>
             <ol>
               <li data-list-text="2.">
@@ -172,16 +167,10 @@
         </ol>
       </li>
     </ol>
+  </div>
 
-    <ol>
-      <li data-list-text="3.">
-        <h1 style="padding-top: 3pt; padding-left: 79pt; text-indent: -27pt;">
-          <a name="bookmark3"></a><br>
-        </h1>
-      </li>
-    </ol>
-
-    <br><br>
+  <!-- Página 2: Versão do Banco e Maiores Tabelas -->
+  <div class="page" id="pagina2">
     <span style="font-size: 21pt;">9.1. Versão do banco de dados</span>
     <br><br>
     <ol>
@@ -201,7 +190,6 @@
         </table>
       </li>
     </ol>
-
     <br><br>
     <span style="font-size: 21pt;">9.2. Maiores Tabelas e Índices</span>
     <br><br>
@@ -217,8 +205,10 @@
         </table>
       </li>
     </ol>
+  </div>
 
-    <br><br><br><br><br><br>
+  <!-- Página 3: Top SQL -->
+  <div class="page" id="pagina3">
     <span style="font-size: 21pt;">9.3. Top SQL com maior time de processamento</span>
     <br><br>
     <ol>
@@ -227,9 +217,6 @@
         <table style="background: #ffffff; border-color: #ffffff;">
           <tbody>
             <tr>
-              <!-- Nesta célula, removemos (ou reduzimos) o padding esquerdo e direito
-                   para que o conteúdo ({{top_sql}}) se estique até quase a borda interna do container cinza.
-                   Para alterar futuramente, ajuste os valores de 'padding-left' e 'padding-right'. -->
               <td bgcolor="#D9D9D9"
                   style="min-height: 100px;
                          white-space: pre-wrap;
@@ -245,9 +232,10 @@
         </table>
       </li>
     </ol>
+  </div>
 
-    <!-- Espaçamentos extras -->
-    <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+  <!-- Página 4: Monitoramento e Crescimento da Base -->
+  <div class="page" id="pagina4">
     <p style="padding-left: 113pt; text-indent: -47pt;">
       <span style="font-size: 21pt;">9.4. Monitoramento da Memória</span>
       <br><br>
@@ -255,9 +243,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <img src="{{monitoramento_memoria}}" alt="Monitoramento da Memória" style="max-width: 100%; height: auto;">
     </div>
-    
     <br>
-    
     <p style="padding-left: 113pt; text-indent: -47pt;">
       <span style="font-size: 21pt;">9.5. Monitoramento da CPU</span>
       <br><br>
@@ -265,7 +251,6 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <img src="{{monitoramento_cpu}}" alt="Monitoramento da CPU" style="max-width: 100%; height: auto;">
     </div>
-    
     <br><br>
     <ol>
       <li data-list-text="2.">
@@ -287,12 +272,10 @@
         </ol>
       </li>
     </ol>
+  </div>
 
-    <!-- Espaços grandes adicionais -->
-    <br><br><br><br><br><br><br><br><br><br><br><br>
-    <br><br><br><br><br><br><br><br><br><br><br><br>
-    <br><br><br><br>
-
+  <!-- Página 5: Backup -->
+  <div class="page" id="pagina5">
     <ol>
       <li style="list-style-type: none;">
         <ol>
@@ -321,7 +304,6 @@
                 </tr>
               </tbody>
             </table>
-
             <br><br>
             <span style="font-size: 21pt;">10.1 Relatório de backup</span>
             <br><br>
@@ -341,11 +323,7 @@
         </ol>
       </li>
     </ol>
-
-    <!-- Espaços finais -->
-    <br><br><br><br><br><br><br><br><br><br>
-
   </div>
-  <!-- Fim do container .page -->
+
 </body>
 </html>
