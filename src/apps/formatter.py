@@ -5,6 +5,7 @@ import os
 import json
 import logging
 import paramiko
+import pandas as pd  # Importa o pandas para formatação da tabela
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,13 +13,10 @@ load_dotenv()
 # Configuração de logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configurações JDBC (permanece obtendo do .env)
+# Configurações JDBC (obtidas do .env)
 jdbc_user = os.getenv("USER_JDBC")
 jdbc_password = os.getenv("PASS_JDBC")
 jdbc_jar = os.getenv("JAR_JDBC")
-
-# O código anterior obtinha as credenciais SSH via .env.
-# Agora elas serão obtidas do arquivo JSON (chaves "userssh" e "senhassh").
 
 # Caminho do template HTML
 template_path = "static/assets/pgr.html"
@@ -91,7 +89,6 @@ def obter_dados_do_servidor():
             stdin, stdout, stderr = ssh.exec_command(comando)
             saida = stdout.read().decode()
             erros = stderr.read().decode()
-            # Se houver erro, mas for o comando "df -h" e a mensagem mencionar "gvfs", ignoramos-o
             if erros:
                 if comando == "df -h" and "gvfs" in erros:
                     output_total += f"{comando}:\n{saida}\n"
@@ -102,7 +99,6 @@ def obter_dados_do_servidor():
                 output_total += f"{comando}:\n{saida}\n"
         
         ssh.close()
-        # Formata as informações do servidor usando <br> em vez de <br><br>
         formatted_output = "<br>".join(output_total.splitlines())
         return {"Informações do Servidor Produtivo": formatted_output}
     except paramiko.SSHException as e:
@@ -198,9 +194,18 @@ def obter_dados_do_banco():
         for chave, query in consultas.items():
             resultado = executar_consulta(conexao, query)
             if resultado:
-                # Converte cada tupla em string, separando-as com <br><br>
-                resultado_str = "<br><br>".join(str(item) for item in resultado)
-                dados[chave] = resultado_str
+                if chave == "maiores_tabelas":
+                    try:
+                        # Utiliza pandas para converter o resultado em uma tabela HTML
+                        df = pd.DataFrame(resultado, columns=["OWNER", "TABLE_NAME", "SIZE (GB)"])
+                        # Gera a tabela HTML com a classe 'tabela_cinza'
+                        dados[chave] = df.to_html(classes="tabela_cinza", index=False, border=0, justify="center")
+                    except Exception as e:
+                        logging.error(f"Erro ao converter maiores_tabelas para HTML: {e}")
+                        dados[chave] = "<p>Erro ao formatar os dados.</p>"
+                else:
+                    resultado_str = "<br><br>".join(str(item) for item in resultado)
+                    dados[chave] = resultado_str
             else:
                 dados[chave] = "Não disponível"
 
