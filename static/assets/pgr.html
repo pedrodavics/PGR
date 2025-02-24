@@ -219,32 +219,31 @@
 </div>
 
 
-  <!-- Página 3: Top SQL -->
-  <div class="page" id="pagina3">
-    <span style="font-size: 21pt;">9.3. Top SQL com maior time de processamento</span>
-    <br><br>
-    <ol>
-      <li data-list-text="2.">
-        <!-- Tabela 5 -->
-        <table style="background: #ffffff; border-color: #ffffff;">
-          <tbody>
-            <tr>
-              <td bgcolor="#D9D9D9"
-                  style="min-height: 100px;
-                         white-space: pre-wrap;
-                         word-wrap: break-word;
-                         overflow-wrap: break-word;
-                         font-size: 11pt;
-                         padding-left: 1px;
-                         padding-right: 1px;">
-                {{top_sql}}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </li>
-    </ol>
-  </div>
+<!-- Página 3: Top SQL -->
+<div class="page" id="pagina3">
+  <span style="font-size: 21pt;">9.3. Top SQL com maior time de processamento</span>
+  <br><br>
+  <ol>
+    <li data-list-text="2.">
+      <!-- Tabela 5 -->
+      <table style="background: #ffffff; border-color: #ffffff;">
+        <tbody>
+          <tr>
+            <td bgcolor="#D9D9D9"
+                style="min-height: 100px;
+                       white-space: pre-wrap;
+                       word-wrap: break-word;
+                       overflow-wrap: break-word;
+                       font-size: 11pt;
+                       padding-left: 1px;
+                       padding-right: 1px;">{{ top_sql | trim }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </li>
+  </ol>
+</div>
+
 
   <!-- Página 4: Monitoramento e Crescimento da Base -->
   <div class="page" id="pagina4">
