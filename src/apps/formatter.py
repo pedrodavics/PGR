@@ -78,7 +78,7 @@ def obter_dados_do_servidor():
         comandos = [
             "hostname",
             "ifconfig | grep inet | awk '{ print $2 }'",
-            "cat /etc/*release*",
+            "cat /etc/*release",
             "free -m",
             "df -h",
             "free -h"
