@@ -181,7 +181,7 @@ def clean():
 
 def execute_scripts():
     try:
-        subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
+    #    subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
         subprocess.run(["python", "src/apps/formatter.py"], check=True)
         subprocess.run(["python", "src/apps/mergepdf.py"], check=True)
     except subprocess.CalledProcessError as e:

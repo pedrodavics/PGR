@@ -203,6 +203,14 @@ def obter_dados_do_banco():
                     except Exception as e:
                         logging.error(f"Erro ao converter maiores_tabelas para HTML: {e}")
                         dados[chave] = "<p>Erro ao formatar os dados.</p>"
+                elif chave == "print_backup":
+                    try:
+                        # Converte o resultado em uma tabela HTML com os títulos definidos
+                        df = pd.DataFrame(resultado, columns=["START_TIME", "END_TIME", "MBYTES", "STATUS", "INPUT_TYPE", "DOW", "SECONDS TAKEN"])
+                        dados[chave] = df.to_html(classes="tabela_cinza", index=False, border=0, justify="center")
+                    except Exception as e:
+                        logging.error(f"Erro ao converter print_backup para HTML: {e}")
+                        dados[chave] = "<p>Erro ao formatar os dados.</p>"
                 else:
                     resultado_str = "<br><br>".join(str(item) for item in resultado)
                     dados[chave] = resultado_str
@@ -250,7 +258,7 @@ def gerar_pdf(dados):
         "margin-right": "3cm",
         "margin-bottom": "1cm",
         "margin-left": "2cm"
-   }
+    }
 
     # Define o diretório de destino para o PDF
     output_dir = "/home/tauge/Documents/tauge/PGR/output/pdf temp"
