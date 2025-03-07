@@ -150,7 +150,7 @@ def obter_dados_do_banco():
                 SELECT
                     TO_CHAR(j.start_time, 'yyyy-mm-dd hh24:mi:ss') AS start_time,
                     TO_CHAR(j.end_time, 'yyyy-mm-dd hh24:mi:ss') AS end_time,
-                    (j.output_bytes/1024/1024) AS output_mbytes,
+                    (j.output_byte+s/1024/1024) AS output_mbytes,
                     j.status, 
                     j.input_type,
                     DECODE(TO_CHAR(j.start_time, 'd'), 
