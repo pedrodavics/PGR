@@ -1,47 +1,17 @@
-import jaydebeapi
 import jinja2
 import pdfkit
 import os
-import json
 import logging
-import pandas as pd  # Importa o pandas para formatação da tabela, se necessário
-from dotenv import load_dotenv
+import pandas as pd  # Para formatação das tabelas
 import io
 import re
-
-load_dotenv()
+import json
 
 # Configuração de logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configurações JDBC (obtidas do .env)
-jdbc_user = os.getenv("USER_JDBC")
-jdbc_password = os.getenv("PASS_JDBC")
-jdbc_jar = os.getenv("JAR_JDBC")
-
 # Caminho do template HTML
 template_path = "static/assets/pgr.html"
-
-# Caminho do arquivo de armazenamento
-storage_file = 'client_info.json'
-
-def carregar_configuracoes_do_storage():
-    """Carrega configurações do cliente a partir de client_info.json"""
-    if os.path.exists(storage_file):
-        with open(storage_file, 'r') as f:
-            data = json.load(f)
-            ip = data.get('ip')
-            db_name = data.get('nomebanco')
-            port_jdbc = data.get('portabanco')
-            
-            if not all([ip, db_name, jdbc_user, jdbc_password]):
-                raise ValueError("Informações incompletas no arquivo de armazenamento.")
-            
-            jdbc_url = f"jdbc:oracle:thin:@{ip}:{port_jdbc}/{db_name}"
-            logging.info(f"String de conexão montada: {jdbc_url}")
-            return jdbc_url, jdbc_user, jdbc_password, db_name
-    else:
-        raise FileNotFoundError("Arquivo 'client_info.json' não encontrado.")
 
 def obter_dados_do_banco():
     """
@@ -61,30 +31,54 @@ def obter_dados_do_banco():
             return "Não disponível"
 
     dados = {}
-    dados["versao_do_banco_de_dados"] = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/info_db_consulta.txt")
+
+    # Processa o arquivo de versão do banco: extrai apenas o valor da versão
+    conteudo_versao = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/info_db_consulta.txt")
+    try:
+        data_version = json.loads(conteudo_versao)
+        if isinstance(data_version, list) and len(data_version) > 0 and "version" in data_version[0]:
+            versao = data_version[0]["version"]
+        else:
+            versao = conteudo_versao
+    except Exception as e:
+        logging.error(f"Erro ao converter info_db_consulta.txt para JSON: {e}")
+        versao = conteudo_versao
+    dados["versao_do_banco_de_dados"] = versao
+
     dados["maiores_tabelas"] = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/biggest_tables_consulta.txt")
     
-    # Para top_sql: formata os blocos separados por '{"rank":"'
+    # Formatação do top_sql: divide o conteúdo em blocos e formata cada bloco em um parágrafo
     conteudo_top_sql = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/top_queries_consulta.txt")
     blocos_top_sql = re.split(r'(?=\{"rank":")', conteudo_top_sql)
     blocos_top_sql = blocos_top_sql[:10]  # Garante que sejam apenas 10 partes, se houver mais
     
     blocos_formatados = []
     for i, bloco in enumerate(blocos_top_sql, 1):
-        # Remove espaços e substitui as quebras de linha literais por <br>
         bloco_formatado = bloco.strip().replace("\\r\\n", "<br><br><br><br>")
-        # Encapsula cada bloco em um parágrafo (<p>) para garantir a linha em branco entre eles
         blocos_formatados.append(f"<p>{i}) {bloco_formatado}</p>")
-    # Junta os parágrafos; cada <p> já gera a separação desejada
     dados["top_sql"] = "\n".join(blocos_formatados)
     
-    # Para print_backup, converte o conteúdo em uma tabela HTML usando pandas
+    # Processamento do print_backup: lê o conteúdo JSON e converte para uma tabela HTML usando pandas
     conteudo_print_backup = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/backups_consulta.txt")
     try:
-        df = pd.read_csv(io.StringIO(conteudo_print_backup), header=None)
-        if df.shape[1] != 7:
-            raise ValueError("Número de colunas inesperado")
-        df.columns = ["START_TIME", "END_TIME", "MBYTES", "STATUS", "INPUT_TYPE", "DOW", "SECONDS TAKEN"]
+        data_backup = json.loads(conteudo_print_backup)
+        # Caso o conteúdo já tenha sido decodificado como string, decodifica novamente
+        if isinstance(data_backup, str):
+            data_backup = json.loads(data_backup)
+        # Verifica se o resultado é uma lista
+        if not isinstance(data_backup, list):
+            raise ValueError("O conteúdo do backup não é uma lista de dicionários.")
+        df = pd.DataFrame(data_backup)
+        # Renomeia as colunas para os títulos esperados
+        df = df.rename(columns={
+            "StartTime": "START_TIME", 
+            "EndTime": "END_TIME", 
+            "TotalOutputMBytes": "MBYTES", 
+            "BackupStatus": "STATUS", 
+            "BackupType": "INPUT_TYPE", 
+            "DayOfWeek": "DOW", 
+            "ElapsedSeconds": "SECONDS TAKEN"
+        })
         dados["print_backup"] = df.to_html(classes="tabela_cinza", index=False, border=0, justify="center")
     except Exception as e:
         logging.error(f"Erro ao converter print_backup para HTML: {e}")
@@ -93,7 +87,7 @@ def obter_dados_do_banco():
     return dados
 
 def gerar_pdf(dados):
-    """Gera um PDF a partir do template preenchido"""
+    """Gera um PDF a partir do template HTML preenchido com os dados."""
     template_loader = jinja2.FileSystemLoader('./')
     template_env = jinja2.Environment(loader=template_loader)
 
@@ -103,7 +97,7 @@ def gerar_pdf(dados):
         logging.error("Erro: O template 'pgr.html' não foi encontrado.")
         exit(1)
 
-    # Inserir as imagens no contexto para o template
+    # Inserir imagens no contexto para o template
     caminho_imagens = "/home/tauge/Documents/tauge/PGR/output/graphics"
     dados["monitoramento_cpu"] = f"file://{os.path.join(caminho_imagens, 'CPU___utilizacao_plotly.png')}"
     dados["monitoramento_memoria"] = f"file://{os.path.join(caminho_imagens, 'Uso_de_memoria_plotly.png')}"
