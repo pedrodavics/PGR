@@ -21,6 +21,7 @@ ZABBIX_USER = os.getenv("USER_ZBX")
 ZABBIX_PASSWORD = os.getenv("PASS_ZBX")
 OUTPUT_DIR = "/home/tauge/Documents/tauge/PGR/output"
 CLIENT_INFO_FILE = "/home/tauge/Documents/tauge/PGR/client_info copy.json"
+SERV_INFO_FILE = "/home/tauge/Documents/tauge/PGR/serv_info.json"
 
 def validar_url_zabbix():
     """Valida e ajusta a URL do Zabbix para a API."""
@@ -30,15 +31,15 @@ def validar_url_zabbix():
         return parsed._replace(path=new_path).geturl()
     return ZABBIX_URL
 
-def carregar_client_info():
-    """Carrega as informações do cliente a partir do arquivo JSON."""
+def carregar_json(caminho_arquivo):
+    """Carrega as informações de um arquivo JSON."""
     try:
-        with open(CLIENT_INFO_FILE, 'r', encoding='utf-8') as file:
-            client_info = json.load(file)
-        logging.info(f"Informações do cliente carregadas de {CLIENT_INFO_FILE}")
-        return client_info
+        with open(caminho_arquivo, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        logging.info(f"Informações carregadas de {caminho_arquivo}")
+        return data
     except Exception as e:
-        logging.error(f"Erro ao carregar client_info: {str(e)}")
+        logging.error(f"Erro ao carregar {caminho_arquivo}: {str(e)}")
         raise
 
 def obter_valor_item(zapi, itemid):
@@ -71,15 +72,15 @@ def obter_valor_item(zapi, itemid):
         logging.error(f"Erro ao obter o valor do item {itemid}: {str(e)}")
         raise
 
-def obter_consultas(zapi, client_info):
+def obter_consultas(zapi, info_dict):
     """
-    Para cada chave do JSON, tenta converter seu valor para inteiro.
+    Para cada chave do dicionário, tenta converter seu valor para inteiro.
     Se conseguir, realiza a consulta na API do Zabbix; caso contrário,
     utiliza o valor original.
     Retorna um dicionário com os resultados.
     """
     consultas = {}
-    for key, value in client_info.items():
+    for key, value in info_dict.items():
         try:
             # Tenta converter para inteiro
             item_id = int(value)
@@ -121,23 +122,50 @@ def salvar_consulta_em_arquivo(chave, valor):
         logging.error(f"Erro ao salvar consulta '{chave}': {str(e)}")
         raise
 
+def salvar_consultas_serv_em_unico_arquivo(resultado):
+    """
+    Salva todas as consultas do serv_info.json em um único arquivo Info_serv_prod.txt.
+    """
+    try:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        output_file = os.path.join(OUTPUT_DIR, "Info_serv_prod.txt")
+
+        with open(output_file, 'w', encoding='utf-8') as file:
+            for chave, valor in resultado.items():
+                try:
+                    formatted_value = json.dumps(valor, indent=4, ensure_ascii=False)
+                except Exception:
+                    formatted_value = str(valor)
+                file.write(f"{chave}: {formatted_value}\n")
+        logging.info(f"Todas as consultas de serv_info salvas em {output_file}")
+        print(f"Todas as consultas de serv_info salvas com sucesso em {output_file}")
+
+    except Exception as e:
+        logging.error(f"Erro ao salvar consultas de serv_info: {str(e)}")
+        raise
+
 def main():
     """Função principal para executar o script."""
     try:
-        # Carrega informações do cliente
-        client_info = carregar_client_info()
+        # Carrega informações do cliente e do servidor
+        client_info = carregar_json(CLIENT_INFO_FILE)
+        serv_info = carregar_json(SERV_INFO_FILE)
 
         # Autenticação na API do Zabbix
         zapi = ZabbixAPI(validar_url_zabbix())
         zapi.login(ZABBIX_USER, ZABBIX_PASSWORD)
         logging.info("Autenticação API realizada com sucesso.")
 
-        # Obtém as consultas para os itens definidos no JSON
-        resultado = obter_consultas(zapi, client_info)
+        # Obtém as consultas para os itens definidos nos JSONs
+        resultado_client = obter_consultas(zapi, client_info)
+        resultado_serv = obter_consultas(zapi, serv_info)
 
-        # Salva cada consulta em um arquivo separado
-        for chave, valor in resultado.items():
+        # Salva cada consulta do client_info em arquivos separados
+        for chave, valor in resultado_client.items():
             salvar_consulta_em_arquivo(chave, valor)
+
+        # Salva todas as consultas do serv_info em um único arquivo
+        salvar_consultas_serv_em_unico_arquivo(resultado_serv)
 
     except Exception as e:
         logging.error(f"Erro no processo: {str(e)}")

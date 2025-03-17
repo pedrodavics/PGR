@@ -91,6 +91,23 @@ def obter_dados_do_banco():
         logging.error(f"Erro ao converter print_backup para HTML: {e}")
         dados["print_backup"] = f"<p>Erro ao formatar os dados: {conteudo_print_backup}</p>"
 
+# 5) Conteúdo de informações do servidor (Info_serv_prod.txt) com formatação específica
+    conteudo_info_servidor = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/Info_serv_prod.txt").strip()
+    if conteudo_info_servidor:
+        linhas = conteudo_info_servidor.splitlines()
+        conteudo_formatado = ""
+        for linha in linhas:
+            if ':' in linha:
+                chave, valor = linha.split(':', 1)
+                chave = chave.strip()
+                valor = valor.strip().strip('"')  # Remove aspas se presentes no arquivo original
+                conteudo_formatado += f"{chave}:<br>\"{valor}\"<br><br>"
+            else:
+                conteudo_formatado += f"{linha}<br><br>"
+        dados["informacoes_servidor"] = conteudo_formatado
+    else:
+        dados["informacoes_servidor"] = "Nenhuma informação do servidor disponível."
+    
     return dados
 
 def gerar_pdf(dados):
