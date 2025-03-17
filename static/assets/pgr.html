@@ -115,6 +115,23 @@
       height: auto;
       object-fit: contain;
     }
+
+    /* Estilos específicos para a seção Top SQL */
+    .top-sql-container {
+      background-color: #D9D9D9;
+      padding: 10px;
+      margin: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .top-sql-pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -220,27 +237,14 @@
 
   <!-- Página 3: Top SQL -->
   <div class="page" id="pagina3">
-    <span style="font-size: 21pt;">9.3. Top SQL com maior time de processamento</span>
+    <span style="font-size: 21pt;">9.3. Top SQL com maior tempo de processamento</span>
     <br><br>
     <ol>
       <li data-list-text="2.">
-        <!-- Tabela 5 -->
-        <table style="background: #ffffff; border-color: #ffffff;">
-          <tbody>
-            <tr>
-              <td bgcolor="#D9D9D9"
-                  style="min-height: 100px;
-                         white-space: pre-wrap;
-                         word-wrap: break-word;
-                         overflow-wrap: break-word;
-                         font-size: 11pt;
-                         padding-left: 1px;
-                         padding-right: 1px;">
-                {{ top_sql | safe }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- Container para Top SQL com estilo ajustado -->
+        <div class="top-sql-container">
+          <pre class="top-sql-pre">{{ top_sql | safe }}</pre>
+        </div>
       </li>
     </ol>
   </div>
@@ -302,15 +306,15 @@
             <table style="background: #ffffff; border-color: #ffffff; width: 493px;">
               <tbody>
                 <tr>
-                  <td bgcolor="#D9D9D9" style="width: 126px;">&nbsp;</td>
+                  <td bgcolor="#D9D9D9" style="width: 126px;"> </td>
                   <td style="width: 362.484px;">
-                    <p>&nbsp;Houveram desvios nos Backup's neste mês.</p>
+                    <p> Houveram desvios nos Backup's neste mês.</p>
                   </td>
                 </tr>
                 <tr>
                   <td bgcolor="#D9D9D9" style="width: 126px;"><br></td>
                   <td style="width: 362.484px;">
-                    <p>&nbsp;Não houveram desvios nos backup's neste mês.</p>
+                    <p> Não houveram desvios nos backup's neste mês.</p>
                   </td>
                 </tr>
               </tbody>

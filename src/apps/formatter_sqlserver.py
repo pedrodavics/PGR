@@ -13,77 +13,84 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Caminho do template HTML
 template_path = "static/assets/pgr.html"
 
-def obter_dados_do_banco():
-    """
-    Lê os conteúdos dos arquivos TXT e retorna um dicionário com os dados formatados.
-    As chaves são mapeadas para os seguintes arquivos:
-        - "versao_do_banco_de_dados"      -> /home/tauge/Documents/tauge/PGR/output/info_db_consulta.txt
-        - "maiores_tabelas"               -> /home/tauge/Documents/tauge/PGR/output/biggest_tables_consulta.txt
-        - "top_sql"                       -> /home/tauge/Documents/tauge/PGR/output/top_queries_consulta.txt
-        - "print_backup"                  -> /home/tauge/Documents/tauge/PGR/output/backups_consulta.txt
-    """
-    def ler_arquivo(caminho):
-        try:
-            with open(caminho, "r") as file:
-                return file.read()
-        except Exception as e:
-            logging.error(f"Erro ao ler arquivo {caminho}: {e}")
-            return "Não disponível"
-
-    dados = {}
-
-    # Processa o arquivo de versão do banco: extrai apenas o valor da versão
-    conteudo_versao = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/info_db_consulta.txt")
+def ler_arquivo(caminho):
+    """Lê o conteúdo de um arquivo de texto."""
     try:
-        data_version = json.loads(conteudo_versao)
-        if isinstance(data_version, list) and len(data_version) > 0 and "version" in data_version[0]:
-            versao = data_version[0]["version"]
-        else:
-            versao = conteudo_versao
+        with open(caminho, 'r', encoding='utf-8') as f:
+            return f.read()
     except Exception as e:
-        logging.error(f"Erro ao converter info_db_consulta.txt para JSON: {e}")
-        versao = conteudo_versao
+        logging.error(f"Erro ao ler o arquivo {caminho}: {e}")
+        return ""
+
+def obter_dados_do_banco():
+    """Extrai e formata os dados dos arquivos de entrada para o PDF."""
+    dados = {}
+    
+    # 1) Versão do banco (extrai apenas números e pontos)
+    conteudo_versao = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/info_db_consulta.txt").strip()
+    match = re.findall(r"[0-9]+(?:\.[0-9]+)+", conteudo_versao)
+    versao = match[0] if match else "Versão não disponível"
     dados["versao_do_banco_de_dados"] = versao
 
-    dados["maiores_tabelas"] = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/biggest_tables_consulta.txt")
-    
-    # Formatação do top_sql: divide o conteúdo em blocos e formata cada bloco em um parágrafo
-    conteudo_top_sql = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/top_queries_consulta.txt")
-    blocos_top_sql = re.split(r'(?=\{"rank":")', conteudo_top_sql)
-    blocos_top_sql = blocos_top_sql[:10]  # Garante que sejam apenas 10 partes, se houver mais
-    
-    blocos_formatados = []
-    for i, bloco in enumerate(blocos_top_sql, 1):
-        bloco_formatado = bloco.strip().replace("\\r\\n", "<br><br><br><br>")
-        blocos_formatados.append(f"<p>{i}) {bloco_formatado}</p>")
-    dados["top_sql"] = "\n".join(blocos_formatados)
-    
-    # Processamento do print_backup: lê o conteúdo JSON e converte para uma tabela HTML usando pandas
-    conteudo_print_backup = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/backups_consulta.txt")
+    # 2) Tabela de maiores_tabelas (biggest_tables_consulta.txt) -> JSON convertido em DataFrame
+    conteudo_biggest_tables = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/biggest_tables_consulta.txt").strip()
+    try:
+        data_biggest_tables = json.loads(conteudo_biggest_tables)
+        if isinstance(data_biggest_tables, str):
+            data_biggest_tables = json.loads(data_biggest_tables)
+        if not isinstance(data_biggest_tables, list):
+            raise ValueError("O conteúdo do biggest_tables_consulta não é uma lista de dicionários.")
+        df_tables = pd.DataFrame(data_biggest_tables)
+        df_tables = df_tables.rename(columns={
+            "owner": "Owner",
+            "table_name": "TABLE_NAME",
+            "size_gb": "SIZE (GB)"
+        })
+        dados["maiores_tabelas"] = df_tables.to_html(classes="tabela_cinza", index=False, border=0, justify="center")
+    except Exception as e:
+        logging.error(f"Erro ao converter biggest_tables_consulta para HTML: {e}")
+        dados["maiores_tabelas"] = f"<p>Erro ao formatar os dados: {conteudo_biggest_tables}</p>"
+
+    # 3) Conteúdo de top_sql (top_queries_consulta.txt) -> Formatar com quebras de linha e sem espaços extras
+    conteudo_top_sql = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/top_queries_consulta.txt").strip()
+    try:
+        # Parsear o JSON para uma lista de dicionários
+        data_top_sql = json.loads(conteudo_top_sql)
+        if isinstance(data_top_sql, str):  # Caso o JSON esteja como string dentro de string
+            data_top_sql = json.loads(data_top_sql)
+        if not isinstance(data_top_sql, list):
+            raise ValueError("O conteúdo do top_queries_consulta não é uma lista de dicionários.")
+        
+        # Formatar cada objeto JSON em uma linha compacta, sem espaços extras, e com uma linha em branco entre eles
+        formatted_top_sql = "\n\n".join(json.dumps(obj, ensure_ascii=False, separators=(",", ":")) for obj in data_top_sql)
+        dados["top_sql"] = formatted_top_sql
+    except Exception as e:
+        logging.error(f"Erro ao formatar top_queries_consulta: {e}")
+        dados["top_sql"] = f"<p>Erro ao formatar os dados: {conteudo_top_sql}</p>"
+
+    # 4) Conteúdo de print_backup (backups_consulta.txt) -> JSON convertido em DataFrame
+    conteudo_print_backup = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/backups_consulta.txt").strip()
     try:
         data_backup = json.loads(conteudo_print_backup)
-        # Caso o conteúdo já tenha sido decodificado como string, decodifica novamente
         if isinstance(data_backup, str):
             data_backup = json.loads(data_backup)
-        # Verifica se o resultado é uma lista
         if not isinstance(data_backup, list):
             raise ValueError("O conteúdo do backup não é uma lista de dicionários.")
-        df = pd.DataFrame(data_backup)
-        # Renomeia as colunas para os títulos esperados
-        df = df.rename(columns={
-            "StartTime": "START_TIME", 
-            "EndTime": "END_TIME", 
-            "TotalOutputMBytes": "MBYTES", 
-            "BackupStatus": "STATUS", 
-            "BackupType": "INPUT_TYPE", 
-            "DayOfWeek": "DOW", 
+        df_backup = pd.DataFrame(data_backup)
+        df_backup = df_backup.rename(columns={
+            "StartTime": "START_TIME",
+            "EndTime": "END_TIME",
+            "TotalOutputMBytes": "MBYTES",
+            "BackupStatus": "STATUS",
+            "BackupType": "INPUT_TYPE",
+            "DayOfWeek": "DOW",
             "ElapsedSeconds": "SECONDS TAKEN"
         })
-        dados["print_backup"] = df.to_html(classes="tabela_cinza", index=False, border=0, justify="center")
+        dados["print_backup"] = df_backup.to_html(classes="tabela_cinza", index=False, border=0, justify="center")
     except Exception as e:
         logging.error(f"Erro ao converter print_backup para HTML: {e}")
         dados["print_backup"] = f"<p>Erro ao formatar os dados: {conteudo_print_backup}</p>"
-        
+
     return dados
 
 def gerar_pdf(dados):
@@ -97,7 +104,6 @@ def gerar_pdf(dados):
         logging.error("Erro: O template 'pgr.html' não foi encontrado.")
         exit(1)
 
-    # Inserir imagens no contexto para o template
     caminho_imagens = "/home/tauge/Documents/tauge/PGR/output/graphics"
     dados["monitoramento_cpu"] = f"file://{os.path.join(caminho_imagens, 'CPU___utilizacao_plotly.png')}"
     dados["monitoramento_memoria"] = f"file://{os.path.join(caminho_imagens, 'Uso_de_memoria_plotly.png')}"
@@ -114,7 +120,6 @@ def gerar_pdf(dados):
         "margin-left": "2cm"
     }
 
-    # Define o diretório de destino para o PDF
     output_dir = "/home/tauge/Documents/tauge/PGR/output/pdf temp"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
