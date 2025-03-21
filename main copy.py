@@ -22,6 +22,7 @@ user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
 
 client_table = os.getenv("CLIENT_TABLE")
+serv_table = os.getenv("SERV_TABLE")  # Variável para a tabela de informações do servidor
 
 def center_window(win, width, height):
     win.update_idletasks()
@@ -76,6 +77,22 @@ def fetch_client_data(client_id):
             connection.close()
     return None
 
+def fetch_serv_info(client_name):
+    connection = connect_db()
+    if connection:
+        try:
+            # Usa RealDictCursor para retornar um dicionário e filtra pela coluna "nome"
+            cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute(f"SELECT * FROM {serv_table} WHERE nome = %s;", (client_name,))
+            return cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao buscar dados do servidor: {e}")
+            return None
+        finally:
+            cursor.close()
+            connection.close()
+    return None
+
 def save_user_data(username, client_name):
     user_ip = socket.gethostbyname(socket.gethostname())
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -101,6 +118,11 @@ def save_client_info(client_data):
     # usando os nomes das colunas retornadas pela consulta.
     with open('client_info copy.json', 'w') as json_file:
         json.dump(client_data, json_file)
+
+def save_serv_info(serv_data):
+    if serv_data:
+        with open('serv_info.json', 'w') as json_file:
+            json.dump(serv_data, json_file)
 
 def get_month_in_portuguese(dt):
     """Retorna o nome do mês em português (minúsculo) para o datetime informado."""
@@ -132,6 +154,22 @@ def clean():
             print("Arquivo 'client_info copy.json' apagado com sucesso!")
         else:
             print("Arquivo 'client_info copy.json' não encontrado para remoção.")
+        
+        # Remove o arquivo serv_info.json (com caminho completo se necessário)
+        serv_info_path = "/home/tauge/Documents/tauge/PGR/serv_info.json"
+        if os.path.exists(serv_info_path):
+            os.remove(serv_info_path)
+            print(f"Arquivo '{serv_info_path}' apagado com sucesso!")
+        else:
+            print(f"Arquivo '{serv_info_path}' não encontrado para remoção.")
+        
+        # Remove o arquivo idcliente_consulta.txt (com caminho completo se necessário)
+        idcliente_path = "/home/tauge/Documents/tauge/PGR/output/idcliente_consulta.txt"
+        if os.path.exists(idcliente_path):
+            os.remove(idcliente_path)
+            print(f"Arquivo '{idcliente_path}' apagado com sucesso!")
+        else:
+            print(f"Arquivo '{idcliente_path}' não encontrado para remoção.")
         
         if os.path.exists("output/images"):
             shutil.rmtree("output/images")
@@ -215,6 +253,11 @@ def generate_report_worker(client_id, username):
     if client_data:
         save_client_info(client_data)
         save_user_data(username, client_data.get("nome"))
+        
+        # Busca e salva as informações do servidor utilizando o nome do cliente
+        serv_data = fetch_serv_info(client_data.get("nome"))
+        save_serv_info(serv_data)
+        
         try:
             execute_scripts()
             clean()

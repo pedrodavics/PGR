@@ -32,15 +32,54 @@ def obter_dados_do_banco():
     versao = match[0] if match else "Versão não disponível"
     dados["versao_do_banco_de_dados"] = versao
 
-    # 2) Tabela de maiores_tabelas (biggest_tables_consulta.txt) -> JSON convertido em DataFrame
+    # 2) Tabela de maiores_tabelas (biggest_tables_consulta.txt)
     conteudo_biggest_tables = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/biggest_tables_consulta.txt").strip()
+    list_data = None
     try:
-        data_biggest_tables = json.loads(conteudo_biggest_tables)
-        if isinstance(data_biggest_tables, str):
-            data_biggest_tables = json.loads(data_biggest_tables)
-        if not isinstance(data_biggest_tables, list):
-            raise ValueError("O conteúdo do biggest_tables_consulta não é uma lista de dicionários.")
-        df_tables = pd.DataFrame(data_biggest_tables)
+        # Tenta carregar como JSON
+        list_data = json.loads(conteudo_biggest_tables)
+        if isinstance(list_data, str):
+            list_data = json.loads(list_data)
+        if not isinstance(list_data, list):
+            raise ValueError("O conteúdo não é uma lista.")
+    except Exception as e:
+        logging.error(f"Falha ao ler JSON diretamente: {e}")
+        # Fallback: tratar o conteúdo como string formatada
+        try:
+            # Divide os itens pela vírgula
+            entries = conteudo_biggest_tables.split(',')
+            list_data = []
+            for entry in entries:
+                entry = entry.strip()
+                if not entry:
+                    continue
+                # Supondo o formato: "dbo.TABELA: 77029.38 MB"
+                parts = entry.split(':')
+                if len(parts) < 2:
+                    continue
+                key_part = parts[0].strip()       # Ex: "dbo.PROCESS_DOCUMENTS"
+                value_part = parts[1].strip()       # Ex: "77029.38 MB"
+                # Remove a unidade "MB"
+                value_str = value_part.replace("MB", "").strip()
+                try:
+                    size_mb = float(value_str)
+                    size_gb = size_mb / 1024  # Converte de MB para GB
+                except Exception as ex:
+                    logging.error(f"Erro ao converter valor {value_str}: {ex}")
+                    size_gb = value_str
+                # Separa owner e table_name (supondo que estejam unidos por ponto)
+                if '.' in key_part:
+                    owner, table_name = key_part.split('.', 1)
+                else:
+                    owner = ""
+                    table_name = key_part
+                list_data.append({"owner": owner, "table_name": table_name, "size_gb": f"{size_gb:.2f}"})
+        except Exception as ex:
+            logging.error(f"Erro no fallback do parsing de biggest_tables_consulta: {ex}")
+            list_data = []
+
+    try:
+        df_tables = pd.DataFrame(list_data)
         df_tables = df_tables.rename(columns={
             "owner": "Owner",
             "table_name": "TABLE_NAME",
@@ -51,12 +90,12 @@ def obter_dados_do_banco():
         logging.error(f"Erro ao converter biggest_tables_consulta para HTML: {e}")
         dados["maiores_tabelas"] = f"<p>Erro ao formatar os dados: {conteudo_biggest_tables}</p>"
 
-    # 3) Conteúdo de top_sql (top_queries_consulta.txt) -> Formatar com quebras de linha e sem espaços extras
+    # 3) Conteúdo de top_sql (top_queries_consulta.txt)
     conteudo_top_sql = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/top_queries_consulta.txt").strip()
     try:
         # Parsear o JSON para uma lista de dicionários
         data_top_sql = json.loads(conteudo_top_sql)
-        if isinstance(data_top_sql, str):  # Caso o JSON esteja como string dentro de string
+        if isinstance(data_top_sql, str):
             data_top_sql = json.loads(data_top_sql)
         if not isinstance(data_top_sql, list):
             raise ValueError("O conteúdo do top_queries_consulta não é uma lista de dicionários.")
@@ -68,7 +107,7 @@ def obter_dados_do_banco():
         logging.error(f"Erro ao formatar top_queries_consulta: {e}")
         dados["top_sql"] = f"<p>Erro ao formatar os dados: {conteudo_top_sql}</p>"
 
-    # 4) Conteúdo de print_backup (backups_consulta.txt) -> JSON convertido em DataFrame
+    # 4) Conteúdo de print_backup (backups_consulta.txt)
     conteudo_print_backup = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/backups_consulta.txt").strip()
     try:
         data_backup = json.loads(conteudo_print_backup)
@@ -91,7 +130,7 @@ def obter_dados_do_banco():
         logging.error(f"Erro ao converter print_backup para HTML: {e}")
         dados["print_backup"] = f"<p>Erro ao formatar os dados: {conteudo_print_backup}</p>"
 
-# 5) Conteúdo de informações do servidor (Info_serv_prod.txt) com formatação específica
+    # 5) Conteúdo de informações do servidor (Info_serv_prod.txt) com formatação específica
     conteudo_info_servidor = ler_arquivo("/home/tauge/Documents/tauge/PGR/output/Info_serv_prod.txt").strip()
     if conteudo_info_servidor:
         linhas = conteudo_info_servidor.splitlines()
@@ -100,7 +139,7 @@ def obter_dados_do_banco():
             if ':' in linha:
                 chave, valor = linha.split(':', 1)
                 chave = chave.strip()
-                valor = valor.strip().strip('"')  # Remove aspas se presentes no arquivo original
+                valor = valor.strip().strip('"')  # Remove aspas se presentes
                 conteudo_formatado += f"{chave}:<br>\"{valor}\"<br><br>"
             else:
                 conteudo_formatado += f"{linha}<br><br>"
