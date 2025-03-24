@@ -51,7 +51,7 @@ def fetch_clients():
     if connection:
         try:
             cursor = connection.cursor()
-            cursor.execute(f"SELECT idcliente, nome FROM {client_table};")
+            cursor.execute(f"SELECT idcliente, nome, db_type FROM {client_table};")  # Alterado para incluir db_type
             return cursor.fetchall()
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao buscar dados: {e}")
@@ -60,6 +60,7 @@ def fetch_clients():
             cursor.close()
             connection.close()
     return []
+
 
 def fetch_client_data(client_id):
     connection = connect_db()
@@ -267,60 +268,85 @@ def generate_report_worker(client_id, username):
     else:
         return False, "Cliente não encontrado."
 
-def finish_report_generation(progress_win, client_root, success, msg):
+def finish_report_generation(progress_win, client_root, success_count, errors):
     progress_win.destroy()
-    if success:
-        messagebox.showinfo("Sucesso", msg)
+    total = success_count + len(errors)
+    if success_count == total:
+        messagebox.showinfo("Sucesso", f"Todos os {total} relatórios gerados com sucesso!")
     else:
-        messagebox.showerror("Erro", msg)
+        error_msg = f"{success_count} relatórios gerados com sucesso, mas ocorreram erros em {len(errors)} relatório(is):\n" + "\n".join(errors)
+        messagebox.showerror("Erro", error_msg)
 
-def thread_generate_report(client_id, username, progress_win, client_root):
-    success, msg = generate_report_worker(client_id, username)
-    client_root.after(0, lambda: finish_report_generation(progress_win, client_root, success, msg))
+def generate_reports_worker(client_ids, username, progress_label, total, client_root):
+    success_count = 0
+    errors = []
+    for i, client_id in enumerate(client_ids, start=1):
+        # Atualiza o rótulo de progresso na thread principal
+        client_root.after(0, lambda i=i: progress_label.config(text=f"Gerando relatório {i} de {total}..."))
+        success, msg = generate_report_worker(client_id, username)
+        if success:
+            success_count += 1
+        else:
+            errors.append(f"Cliente ID {client_id}: {msg}")
+    return success_count, errors
+
+def thread_generate_reports(client_ids, username, progress_win, client_root, progress_label):
+    success_count, errors = generate_reports_worker(client_ids, username, progress_label, len(client_ids), client_root)
+    client_root.after(0, lambda: finish_report_generation(progress_win, client_root, success_count, errors))
 
 def show_client_selection(root):
     root.destroy()
     client_root = tk.Tk()
     client_root.title("Gerador de Relatórios")
-    center_window(client_root, 400, 300)
+    center_window(client_root, 400, 500)
 
-    tk.Label(client_root, text="Selecione um cliente:").pack(pady=10)
+    tk.Label(client_root, text="Selecione um ou mais clientes:").pack(pady=10)
     clients = fetch_clients()
-    client_names = [client[1] for client in clients]
-    client_var = tk.StringVar()
-    client_dropdown = ttk.Combobox(client_root, textvariable=client_var, values=client_names, state="readonly")
-    client_dropdown.pack(pady=5)
+    
+    # Cria um frame com fundo branco e borda para simular uma caixa com tamanho fixo
+    checkbox_frame = tk.Frame(client_root, bg="white", bd=1, relief=tk.SOLID, width=300, height=250)
+    checkbox_frame.pack(pady=5)
+    checkbox_frame.pack_propagate(False)
+
+    # Lista que armazenará tuplas (cliente, variável_boolean)
+    checkbox_vars = []
+    for client in clients:
+        # Exibe o nome e o db_type (assumindo que client[2] é db_type)
+        display_text = f"{client[1]} ({client[2]})"
+        var = tk.BooleanVar()
+        chk = tk.Checkbutton(checkbox_frame, text=display_text, variable=var, anchor="w", bg="white")
+        chk.pack(anchor='w', fill="x", padx=5, pady=2)
+        checkbox_vars.append((client, var))
 
     tk.Label(client_root, text="Seu nome de usuário:").pack(pady=10)
     username_entry = tk.Entry(client_root)
     username_entry.pack(pady=5)
 
     def on_generate():
-        selected_client_name = client_var.get()
-        username = username_entry.get()
-        if not selected_client_name or not username:
-            messagebox.showerror("Erro", "Por favor, preencha todos os campos.")
+        selected_clients = [client for client, var in checkbox_vars if var.get()]
+        username = username_entry.get().strip()
+        if not selected_clients or not username:
+            messagebox.showerror("Erro", "Selecione pelo menos um cliente e preencha seu nome de usuário.")
             return
-        selected_client = next((client for client in clients if client[1] == selected_client_name), None)
-        if selected_client:
-            # Cria a janela de progresso
-            progress_win = tk.Toplevel(client_root)
-            progress_win.title("Aguarde...")
-            center_window(progress_win, 300, 100)
-            tk.Label(progress_win, text="Gerando relatório...").pack(pady=10, padx=10)
-            progress_bar = ttk.Progressbar(progress_win, mode='indeterminate', length=250)
-            progress_bar.pack(pady=10, padx=10)
-            progress_bar.start()
-            # Executa a geração do relatório em uma thread separada
-            threading.Thread(
-                target=thread_generate_report,
-                args=(selected_client[0], username, progress_win, client_root),
-                daemon=True
-            ).start()
-        else:
-            messagebox.showerror("Erro", "Cliente selecionado não encontrado.")
+        client_ids = [client[0] for client in selected_clients]
+        
+        # Cria a janela de progresso
+        progress_win = tk.Toplevel(client_root)
+        progress_win.title("Aguarde...")
+        center_window(progress_win, 300, 120)
+        progress_label = tk.Label(progress_win, text="Gerando relatórios...")
+        progress_label.pack(pady=10, padx=10)
+        progress_bar = ttk.Progressbar(progress_win, mode='indeterminate', length=250)
+        progress_bar.pack(pady=10, padx=10)
+        progress_bar.start()
+        # Executa a geração dos relatórios em uma thread separada
+        threading.Thread(
+            target=thread_generate_reports,
+            args=(client_ids, username, progress_win, client_root, progress_label),
+            daemon=True
+        ).start()
 
-    tk.Button(client_root, text="Gerar Relatório", command=on_generate).pack(pady=20)
+    tk.Button(client_root, text="Gerar Relatórios", command=on_generate).pack(pady=20)
     client_root.mainloop()
 
 def main():
