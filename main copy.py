@@ -22,7 +22,8 @@ user = os.getenv("USER_DB")
 password = os.getenv("PASS_DB")
 
 client_table = os.getenv("CLIENT_TABLE")
-serv_table = os.getenv("SERV_TABLE")  # Variável para a tabela de informações do servidor
+serv_table = os.getenv("SERV_TABLE")  # Tabela de informações do servidor
+urlzbx_table = os.getenv("URLZBX_TABLE")  # Tabela de gráficos (ulrzbx.json)
 
 def center_window(win, width, height):
     win.update_idletasks()
@@ -51,7 +52,7 @@ def fetch_clients():
     if connection:
         try:
             cursor = connection.cursor()
-            cursor.execute(f"SELECT idcliente, nome, db_type FROM {client_table};")  # Alterado para incluir db_type
+            cursor.execute(f"SELECT idcliente, nome, db_type FROM {client_table};")
             return cursor.fetchall()
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao buscar dados: {e}")
@@ -61,12 +62,10 @@ def fetch_clients():
             connection.close()
     return []
 
-
 def fetch_client_data(client_id):
     connection = connect_db()
     if connection:
         try:
-            # Utiliza RealDictCursor para retornar um dicionário com os nomes das colunas
             cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cursor.execute(f"SELECT * FROM {client_table} WHERE idcliente = %s;", (client_id,))
             return cursor.fetchone()
@@ -82,12 +81,26 @@ def fetch_serv_info(client_name):
     connection = connect_db()
     if connection:
         try:
-            # Usa RealDictCursor para retornar um dicionário e filtra pela coluna "nome"
             cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cursor.execute(f"SELECT * FROM {serv_table} WHERE nome = %s;", (client_name,))
             return cursor.fetchone()
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao buscar dados do servidor: {e}")
+            return None
+        finally:
+            cursor.close()
+            connection.close()
+    return None
+
+def fetch_urlzbx_info(client_name):
+    connection = connect_db()
+    if connection:
+        try:
+            cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute(f"SELECT * FROM {urlzbx_table} WHERE nome = %s;", (client_name,))
+            return cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao buscar dados da URL ZBX: {e}")
             return None
         finally:
             cursor.close()
@@ -115,8 +128,6 @@ def save_user_data(username, client_name):
             connection.close()
 
 def save_client_info(client_data):
-    # Salva as informações do cliente diretamente no JSON,
-    # usando os nomes das colunas retornadas pela consulta.
     with open('client_info copy.json', 'w') as json_file:
         json.dump(client_data, json_file)
 
@@ -125,8 +136,12 @@ def save_serv_info(serv_data):
         with open('serv_info.json', 'w') as json_file:
             json.dump(serv_data, json_file)
 
+def save_urlzbx_info(urlzbx_data):
+    if urlzbx_data:
+        with open('ulrzbx.json', 'w') as json_file:
+            json.dump(urlzbx_data, json_file)
+
 def get_month_in_portuguese(dt):
-    """Retorna o nome do mês em português (minúsculo) para o datetime informado."""
     months = {
         1: 'janeiro',
         2: 'fevereiro',
@@ -145,7 +160,6 @@ def get_month_in_portuguese(dt):
 
 def clean():
     try:
-        # Captura o valor da coluna "nome" antes de remover o arquivo de configurações
         nome_cliente = None
         if os.path.exists('client_info copy.json'):
             with open('client_info copy.json', 'r') as f:
@@ -156,7 +170,6 @@ def clean():
         else:
             print("Arquivo 'client_info copy.json' não encontrado para remoção.")
         
-        # Remove o arquivo serv_info.json (com caminho completo se necessário)
         serv_info_path = "/home/tauge/Documents/tauge/PGR/serv_info.json"
         if os.path.exists(serv_info_path):
             os.remove(serv_info_path)
@@ -164,7 +177,6 @@ def clean():
         else:
             print(f"Arquivo '{serv_info_path}' não encontrado para remoção.")
         
-        # Remove o arquivo idcliente_consulta.txt (com caminho completo se necessário)
         idcliente_path = "/home/tauge/Documents/tauge/PGR/output/idcliente_consulta.txt"
         if os.path.exists(idcliente_path):
             os.remove(idcliente_path)
@@ -176,7 +188,6 @@ def clean():
             shutil.rmtree("output/images")
             print("Pasta 'images' apagada com sucesso!")
         
-        # Renomeia o PDF gerado usando o nome do cliente selecionado na interface
         if os.path.exists("output/relatorio.pdf"):
             mes_atual = get_month_in_portuguese(datetime.now())
             nome_cliente = nome_cliente if nome_cliente else "Cliente"
@@ -188,7 +199,6 @@ def clean():
             shutil.rmtree("output/reports")
             print("Pasta 'reports' apagada com sucesso!")
         
-        # Limpeza dos arquivos e pastas temporários solicitados
         if os.path.exists("output/pdf temp"):
             shutil.rmtree("output/pdf temp")
             print("Pasta 'output/pdf temp' apagada com sucesso!")
@@ -242,7 +252,6 @@ def clean():
 
 def execute_scripts():
     try:
-        # Executa os scripts na sequência solicitada
         subprocess.run(["python", "src/apps/ultima_consulta.py"], check=True)
         subprocess.run(["python", "src/apps/formatter_sqlserver.py"], check=True)
         subprocess.run(["python", "src/apps/mergepdf.py"], check=True)
@@ -255,9 +264,13 @@ def generate_report_worker(client_id, username):
         save_client_info(client_data)
         save_user_data(username, client_data.get("nome"))
         
-        # Busca e salva as informações do servidor utilizando o nome do cliente
+        # Busca e salva informações do servidor usando o nome do cliente
         serv_data = fetch_serv_info(client_data.get("nome"))
         save_serv_info(serv_data)
+        
+        # Busca e salva informações da URL ZBX usando o mesmo nome do cliente
+        urlzbx_data = fetch_urlzbx_info(client_data.get("nome"))
+        save_urlzbx_info(urlzbx_data)
         
         try:
             execute_scripts()
@@ -281,7 +294,6 @@ def generate_reports_worker(client_ids, username, progress_label, total, client_
     success_count = 0
     errors = []
     for i, client_id in enumerate(client_ids, start=1):
-        # Atualiza o rótulo de progresso na thread principal
         client_root.after(0, lambda i=i: progress_label.config(text=f"Gerando relatório {i} de {total}..."))
         success, msg = generate_report_worker(client_id, username)
         if success:
@@ -303,15 +315,12 @@ def show_client_selection(root):
     tk.Label(client_root, text="Selecione um ou mais clientes:").pack(pady=10)
     clients = fetch_clients()
     
-    # Cria um frame com fundo branco e borda para simular uma caixa com tamanho fixo
     checkbox_frame = tk.Frame(client_root, bg="white", bd=1, relief=tk.SOLID, width=300, height=250)
     checkbox_frame.pack(pady=5)
     checkbox_frame.pack_propagate(False)
 
-    # Lista que armazenará tuplas (cliente, variável_boolean)
     checkbox_vars = []
     for client in clients:
-        # Exibe o nome e o db_type (assumindo que client[2] é db_type)
         display_text = f"{client[1]} ({client[2]})"
         var = tk.BooleanVar()
         chk = tk.Checkbutton(checkbox_frame, text=display_text, variable=var, anchor="w", bg="white")
@@ -330,7 +339,6 @@ def show_client_selection(root):
             return
         client_ids = [client[0] for client in selected_clients]
         
-        # Cria a janela de progresso
         progress_win = tk.Toplevel(client_root)
         progress_win.title("Aguarde...")
         center_window(progress_win, 300, 120)
@@ -339,7 +347,6 @@ def show_client_selection(root):
         progress_bar = ttk.Progressbar(progress_win, mode='indeterminate', length=250)
         progress_bar.pack(pady=10, padx=10)
         progress_bar.start()
-        # Executa a geração dos relatórios em uma thread separada
         threading.Thread(
             target=thread_generate_reports,
             args=(client_ids, username, progress_win, client_root, progress_label),
@@ -350,9 +357,8 @@ def show_client_selection(root):
     client_root.mainloop()
 
 def main():
-    # Abre diretamente a janela de seleção de cliente sem autenticação
     root = tk.Tk()
-    root.withdraw()  # Oculta a janela principal
+    root.withdraw()
     show_client_selection(root)
 
 if __name__ == "__main__":
