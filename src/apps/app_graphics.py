@@ -36,7 +36,6 @@ def login_zabbix(page):
     login_url = f"{ZABBIX_URL}/"
     logging.info(f"Iniciando login na URL: {login_url}")
     
-    # Acessa a página de login e aguarda o estado networkidle
     page.goto(login_url, wait_until="networkidle")
     
     # Aguarda e preenche os campos de login
@@ -51,6 +50,35 @@ def login_zabbix(page):
     
     logging.info(f"Login realizado com sucesso. URL atual: {page.url}")
 
+def set_date_and_capture(page, url, output_filename):
+    """
+    Acessa a URL do gráfico, altera o período para "now-30d" a "now",
+    clica no botão Apply, aguarda 7 segundos e captura a imagem do gráfico.
+    """
+    logging.info(f"Acessando URL: {url}")
+    page.goto(url, wait_until="networkidle")
+    
+    # Aguarda os campos de data e botão de apply
+    page.wait_for_selector("input#from", timeout=15000)
+    page.wait_for_selector("input#to", timeout=15000)
+    page.wait_for_selector("button#apply", timeout=15000)
+    
+    # Define o período de 30 dias
+    page.fill("input#from", "now-30d")
+    page.fill("input#to", "now")
+    page.click("button#apply")
+    
+    # Aguarda 7 segundos para que o gráfico seja atualizado
+    page.wait_for_timeout(7000)
+    
+    # Aguarda que o elemento do gráfico esteja visível
+    page.wait_for_selector("img#historyGraph", timeout=15000)
+    
+    # Captura apenas o elemento do gráfico
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
+    page.locator("img#historyGraph").screenshot(path=output_path)
+    logging.info(f"Screenshot do gráfico salvo com sucesso em: {output_path}")
+
 def capture_pages():
     # URLs dos gráficos de CPU e Memória
     url_cpu = f"{ZABBIX_URL}/history.php?action=showgraph&itemids%5B%5D=92350"
@@ -62,28 +90,14 @@ def capture_pages():
             context = browser.new_context()
             page = context.new_page()
             
-            # Realiza o login no Zabbix
+            # Efetua o login no Zabbix
             login_zabbix(page)
             
-            # Captura da página de CPU:
-            logging.info(f"Acessando página de CPU: {url_cpu}")
-            page.goto(url_cpu, wait_until="networkidle")
-            # Aguarda que um elemento que contenha o gráfico esteja visível.
-            # Aqui usamos "img" como exemplo; se o gráfico for renderizado em canvas, troque para "canvas".
-            page.wait_for_selector("img", timeout=15000)
-            # Alternativamente, pode-se aguardar alguns segundos:
-            # page.wait_for_timeout(3000)
-            cpu_path = os.path.join(OUTPUT_DIR, "full_page_cpu.png")
-            page.screenshot(path=cpu_path, full_page=True)
-            logging.info(f"Screenshot da página de CPU salvo com sucesso em: {cpu_path}")
+            # Captura do gráfico de CPU (após alterar para 30 dias)
+            set_date_and_capture(page, url_cpu, "full_page_cpu.png")
             
-            # Captura da página de Memória:
-            logging.info(f"Acessando página de Memória: {url_memoria}")
-            page.goto(url_memoria, wait_until="networkidle")
-            page.wait_for_selector("img", timeout=15000)
-            mem_path = os.path.join(OUTPUT_DIR, "full_page_memoria.png")
-            page.screenshot(path=mem_path, full_page=True)
-            logging.info(f"Screenshot da página de Memória salvo com sucesso em: {mem_path}")
+            # Captura do gráfico de Memória (após alterar para 30 dias)
+            set_date_and_capture(page, url_memoria, "full_page_memoria.png")
             
             print("Imagens capturadas com sucesso!")
         except PlaywrightTimeoutError as e:
