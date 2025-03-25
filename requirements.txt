@@ -11,3 +11,6 @@ plotly
 kaleido
 scipy
 paramiko
+jinja2
+pypdf
+playwright
