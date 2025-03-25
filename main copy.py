@@ -246,12 +246,19 @@ def clean():
         if os.path.exists("output/top_queries_consulta.txt"):
             os.remove("output/top_queries_consulta.txt")
             print("Arquivo 'output/top_queries_consulta.txt' apagado com sucesso!")
+        
+        # Remoção da pasta output/graphics e seu conteúdo
+        if os.path.exists("output/graphics"):
+            shutil.rmtree("output/graphics")
+            print("Pasta 'output/graphics' apagada com sucesso!")
     
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao limpar arquivos temporários: {e}")
 
 def execute_scripts():
     try:
+        # Executa o app_graphics.py primeiro
+        subprocess.run(["python", "src/apps/app_graphics.py"], check=True)
         subprocess.run(["python", "src/apps/ultima_consulta.py"], check=True)
         subprocess.run(["python", "src/apps/formatter_sqlserver.py"], check=True)
         subprocess.run(["python", "src/apps/mergepdf.py"], check=True)

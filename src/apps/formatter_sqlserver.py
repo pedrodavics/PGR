@@ -160,16 +160,17 @@ def gerar_pdf(dados):
         logging.error("Erro: O template 'pgr.html' não foi encontrado.")
         exit(1)
 
-    caminho_imagens = "/home/tauge/Documents/tauge/PGR/output/graphics"
-    dados["monitoramento_cpu"] = f"file://{os.path.join(caminho_imagens, 'CPU___utilizacao_plotly.png')}"
-    dados["monitoramento_memoria"] = f"file://{os.path.join(caminho_imagens, 'Uso_de_memoria_plotly.png')}"
+    # Utiliza caminhos absolutos para as imagens, garantindo que o wkhtmltopdf as encontre
+    caminho_imagens = os.path.abspath("output/graphics")
+    dados["monitoramento_cpu"] = f"file://{os.path.join(caminho_imagens, 'full_page_cpu.png')}"
+    dados["monitoramento_memoria"] = f"file://{os.path.join(caminho_imagens, 'full_page_memoria.png')}"
 
     output_text = template.render(dados)
 
     config = pdfkit.configuration(wkhtmltopdf="/usr/bin/wkhtmltopdf")
     options = {
         "encoding": "UTF-8",
-        "enable-local-file-access": None,
+        "enable-local-file-access": "",  # Necessário para permitir acesso a arquivos locais
         "margin-top": "0.3cm",
         "margin-right": "3cm",
         "margin-bottom": "1cm",
@@ -181,8 +182,12 @@ def gerar_pdf(dados):
         os.makedirs(output_dir)
     output_file = os.path.join(output_dir, "pgr_final.pdf")
 
-    pdfkit.from_string(output_text, output_file, configuration=config, options=options)
-    print("PDF gerado com sucesso em:", output_file)
+    try:
+        pdfkit.from_string(output_text, output_file, configuration=config, options=options)
+        print("PDF gerado com sucesso em:", output_file)
+    except Exception as e:
+        logging.error(f"Erro ao gerar o PDF: {e}")
+        print(f"Erro ao gerar o PDF: {e}")
 
 if __name__ == "__main__":
     dados_extraidos = obter_dados_do_banco()

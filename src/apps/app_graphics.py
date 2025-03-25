@@ -2,6 +2,7 @@
 import os
 import logging
 import re
+import json
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from dotenv import load_dotenv
 
@@ -17,8 +18,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Configurações do Zabbix
-ZABBIX_URL = os.getenv("URL_ZBX")  # Exemplo: "http://10.85.104.5"
+# Configurações do Zabbix (as variáveis ZABBIX_URL, ZABBIX_USER e ZABBIX_PASSWORD continuam disponíveis)
+ZABBIX_URL = os.getenv("URL_ZBX")
 ZABBIX_USER = os.getenv("USER_ZBX")
 ZABBIX_PASSWORD = os.getenv("PASS_ZBX")
 OUTPUT_DIR = "/home/tauge/Documents/tauge/PGR/output/graphics"
@@ -80,9 +81,18 @@ def set_date_and_capture(page, url, output_filename):
     logging.info(f"Screenshot do gráfico salvo com sucesso em: {output_path}")
 
 def capture_pages():
-    # URLs dos gráficos de CPU e Memória
-    url_cpu = f"{ZABBIX_URL}/history.php?action=showgraph&itemids%5B%5D=92350"
-    url_memoria = f"{ZABBIX_URL}/history.php?action=showgraph&itemids%5B%5D=92366"
+    # Carrega as URLs do arquivo JSON (localizado na raiz da aplicação)
+    json_file = 'ulrzbx.json'
+    try:
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+        url_cpu = data.get("urlcpu")
+        url_memoria = data.get("urlmemoria")
+        logging.info("URLs carregadas do arquivo JSON com sucesso.")
+    except Exception as e:
+        logging.error(f"Erro ao ler o arquivo JSON: {e}")
+        print(f"Erro ao ler o arquivo JSON: {e}")
+        return
 
     with sync_playwright() as p:
         try:
