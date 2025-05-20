@@ -16,6 +16,17 @@ O PGR foi projetado para atender às necessidades de sustentação de banco de d
 
 ---
 
+## 📑 Sumário de Documentação
+
+Abaixo estão links para a documentação detalhada do projeto:
+
+- [Análise de Dependências e Tecnologias do PGR](https://github.com/pedrodavics/PGR/blob/main/Documentation/An%C3%A1lise%20de%20Depend%C3%AAncias%20e%20Tecnologias%20do%20PGR.md)  
+- [Documentação Técnica do PGR](https://github.com/pedrodavics/PGR/blob/main/Documentation/Documenta%C3%A7%C3%A3o%20T%C3%A9cnica%20do%20PGR.md)  
+- [Mapeamento de Funcionalidades e Fluxos Principais do PGR](https://github.com/pedrodavics/PGR/blob/main/Documentation/Mapeamento%20de%20Funcionalidades%20e%20Fluxos%20Principais%20do%20PGR.md)
+
+---
+
+
 ## ⚙️ Funcionalidades Principais
 
 - **🤖 Automatização da Geração de Relatórios**: A plataforma coleta dados situacionais de diferentes fontes e os organiza em relatórios formatados.
